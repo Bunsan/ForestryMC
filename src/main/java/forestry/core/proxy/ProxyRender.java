@@ -22,7 +22,14 @@ import forestry.core.tiles.MachineDefinition;
 
 public class ProxyRender {
 
-	public int getNextAvailableRenderId() {
+	public void init() {
+	}
+
+	public int getCandleRenderId() {
+		return 0;
+	}
+
+	public int getByBlockModelRenderId() {
 		return 0;
 	}
 
@@ -75,7 +82,7 @@ public class ProxyRender {
 
 	/* FX */
 
-	public void addBeeHiveFX(String texture, World world, ChunkCoordinates coordinates, int color) {
+	public void addBeeHiveFX(String texture, World world, double d1, double d2, double d3, int color) {
 	}
 
 	public void addEntitySwarmFX(World world, double d1, double d2, double d3) {

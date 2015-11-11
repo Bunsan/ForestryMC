@@ -10,13 +10,18 @@
  ******************************************************************************/
 package forestry.arboriculture;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 import forestry.api.arboriculture.TreeManager;
 import forestry.arboriculture.gui.GuiTreealyzer;
-import forestry.arboriculture.items.ItemTreealyzer.TreealyzerInventory;
+import forestry.arboriculture.inventory.ItemInventoryTreealyzer;
 import forestry.core.GuiHandlerBase;
 import forestry.core.gui.ContainerAlyzer;
 import forestry.core.network.GuiId;
@@ -24,7 +29,7 @@ import forestry.core.network.GuiId;
 public class GuiHandlerArboriculture extends GuiHandlerBase {
 
 	@Override
-	public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Container getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 		int cleanId = decodeGuiID(id);
 
 		if (cleanId >= GuiId.values().length) {
@@ -42,7 +47,7 @@ public class GuiHandlerArboriculture extends GuiHandlerBase {
 					return null;
 				}
 
-				return new ContainerAlyzer(new TreealyzerInventory(player, equipped), player);
+				return new ContainerAlyzer(new ItemInventoryTreealyzer(player, equipped), player);
 
 			default:
 				return null;
@@ -51,8 +56,9 @@ public class GuiHandlerArboriculture extends GuiHandlerBase {
 
 	}
 
+	@SideOnly(Side.CLIENT)
 	@Override
-	public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Gui getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 		int cleanId = decodeGuiID(id);
 		
 		if (cleanId >= GuiId.values().length) {
@@ -70,7 +76,7 @@ public class GuiHandlerArboriculture extends GuiHandlerBase {
 					return null;
 				}
 
-				return new GuiTreealyzer(player, new TreealyzerInventory(player, equipped));
+				return new GuiTreealyzer(player, new ItemInventoryTreealyzer(player, equipped));
 
 			default:
 				return null;

@@ -26,6 +26,7 @@ import net.minecraft.block.Block;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
@@ -43,11 +44,12 @@ import forestry.api.core.EnumTemperature;
 import forestry.api.core.IErrorLogic;
 import forestry.api.farming.FarmDirection;
 import forestry.api.farming.ICrop;
-import forestry.api.farming.IFarmComponent;
 import forestry.api.farming.IFarmInventory;
 import forestry.api.farming.IFarmListener;
 import forestry.api.farming.IFarmLogic;
 import forestry.api.farming.IFarmable;
+import forestry.api.multiblock.IFarmComponent;
+import forestry.api.multiblock.IMultiblockComponent;
 import forestry.core.access.EnumAccess;
 import forestry.core.config.Config;
 import forestry.core.config.Constants;
@@ -59,16 +61,11 @@ import forestry.core.fluids.tanks.StandardTank;
 import forestry.core.inventory.FakeInventoryAdapter;
 import forestry.core.inventory.IInventoryAdapter;
 import forestry.core.inventory.InventoryAdapter;
-import forestry.core.multiblock.CoordTriplet;
-import forestry.core.multiblock.IMultiblockPart;
-import forestry.core.multiblock.MultiblockControllerBase;
-import forestry.core.multiblock.MultiblockTileEntityBase;
+import forestry.core.multiblock.IMultiblockControllerInternal;
 import forestry.core.multiblock.MultiblockValidationException;
-import forestry.core.multiblock.rectangular.RectangularMultiblockControllerBase;
+import forestry.core.multiblock.RectangularMultiblockControllerBase;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.PacketGuiUpdate;
-import forestry.core.proxy.Proxies;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.utils.Log;
 import forestry.core.utils.PlayerUtil;
@@ -78,9 +75,10 @@ import forestry.farming.FarmHelper;
 import forestry.farming.FarmTarget;
 import forestry.farming.gui.IFarmLedgerDelegate;
 import forestry.farming.logic.FarmLogicArboreal;
+import forestry.farming.tiles.TileFarmPlain;
 import forestry.farming.tiles.TileGearbox;
 
-public class FarmController extends RectangularMultiblockControllerBase implements IFarmController, ILiquidTankTile {
+public class FarmController extends RectangularMultiblockControllerBase implements IFarmControllerInternal, ILiquidTankTile {
 
 	private enum Stage {
 		CULTIVATE, HARVEST;
@@ -124,7 +122,7 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	private final Map<FarmDirection, IFarmLogic> farmLogics = new EnumMap<>(FarmDirection.class);
 
 	private final InventoryAdapter sockets;
-	private final FarmInventory inventory;
+	private final InventoryFarm inventory;
 	private final TankManager tankManager;
 	private final StandardTank resourceTank;
 	private final FarmHydrationManager hydrationManager;
@@ -136,12 +134,12 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	private BiomeGenBase cachedBiome;
 
 	public FarmController(World world) {
-		super(world);
+		super(world, FarmMultiblockSizeLimits.instance);
 
 		this.resourceTank = new FilteredTank(Constants.PROCESSOR_TANK_CAPACITY, FluidRegistry.WATER);
 		this.tankManager = new TankManager(this, resourceTank);
 
-		this.inventory = new FarmInventory(this);
+		this.inventory = new InventoryFarm(this);
 		this.sockets = new InventoryAdapter(1, "sockets");
 		this.hydrationManager = new FarmHydrationManager(this);
 		this.fertilizerManager = new FarmFertilizerManager();
@@ -170,19 +168,19 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	private BiomeGenBase getBiome() {
 		if (cachedBiome == null) {
-			CoordTriplet coords = getReferenceCoord();
-			cachedBiome = worldObj.getBiomeGenForCoords(coords.x, coords.z);
+			ChunkCoordinates coords = getReferenceCoord();
+			cachedBiome = worldObj.getBiomeGenForCoords(coords.posX, coords.posZ);
 		}
 		return cachedBiome;
 	}
 
 	@Override
-	public void onAttachedPartWithMultiblockData(IMultiblockPart part, NBTTagCompound data) {
+	public void onAttachedPartWithMultiblockData(IMultiblockComponent part, NBTTagCompound data) {
 		this.readFromNBT(data);
 	}
 
 	@Override
-	protected void onBlockAdded(IMultiblockPart newPart) {
+	protected void onBlockAdded(IMultiblockComponent newPart) {
 		if (newPart instanceof IFarmComponent.Listener) {
 			IFarmComponent.Listener listenerPart = (IFarmComponent.Listener) newPart;
 			farmListeners.add(listenerPart.getFarmListener());
@@ -194,7 +192,7 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	}
 
 	@Override
-	protected void onBlockRemoved(IMultiblockPart oldPart) {
+	protected void onBlockRemoved(IMultiblockComponent oldPart) {
 		if (oldPart instanceof IFarmComponent.Listener) {
 			IFarmComponent.Listener listenerPart = (IFarmComponent.Listener) oldPart;
 			farmListeners.remove(listenerPart.getFarmListener());
@@ -210,7 +208,7 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 		super.isMachineWhole();
 
 		boolean hasGearbox = false;
-		for (IMultiblockPart part : connectedParts) {
+		for (IMultiblockComponent part : connectedParts) {
 			if (part instanceof TileGearbox) {
 				hasGearbox = true;
 				break;
@@ -229,47 +227,26 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	}
 
 	@Override
-	protected int getMinimumNumberOfBlocksForAssembledMachine() {
-		return 3 * 3 * 4;
+	public void isGoodForExteriorLevel(IMultiblockComponent part, int level) throws MultiblockValidationException {
+		if (level == 2 && !(part instanceof TileFarmPlain)) {
+			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.farm.error.needPlainBand"));
+		}
 	}
 
 	@Override
-	protected int getMaximumXSize() {
-		return 5;
+	public void isGoodForInterior(IMultiblockComponent part) throws MultiblockValidationException {
+		if (!(part instanceof TileFarmPlain)) {
+			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.farm.error.needPlainInterior"));
+		}
 	}
 
 	@Override
-	protected int getMaximumZSize() {
-		return 5;
-	}
-
-	@Override
-	protected int getMaximumYSize() {
-		return 4;
-	}
-
-	@Override
-	protected int getMinimumXSize() {
-		return 3;
-	}
-
-	@Override
-	protected int getMinimumZSize() {
-		return 3;
-	}
-
-	@Override
-	protected int getMinimumYSize() {
-		return 4;
-	}
-
-	@Override
-	protected void onAssimilate(MultiblockControllerBase assimilated) {
+	public void onAssimilate(IMultiblockControllerInternal assimilated) {
 
 	}
 
 	@Override
-	protected void onAssimilated(MultiblockControllerBase assimilator) {
+	public void onAssimilated(IMultiblockControllerInternal assimilator) {
 
 	}
 
@@ -294,12 +271,12 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 		if (hasPower) {
 			noPowerTime = 0;
-			getErrorLogic().setCondition(false, EnumErrorCode.NOPOWER);
+			getErrorLogic().setCondition(false, EnumErrorCode.NO_POWER);
 		} else {
 			if (noPowerTime <= 4) {
 				noPowerTime++;
 			} else {
-				getErrorLogic().setCondition(true, EnumErrorCode.NOPOWER);
+				getErrorLogic().setCondition(true, EnumErrorCode.NO_POWER);
 			}
 		}
 
@@ -358,21 +335,18 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public ChunkCoordinates getCoordinates() {
-		CoordTriplet coord = getReferenceCoord();
-		return new ChunkCoordinates(coord.x, coord.y, coord.z);
+		ChunkCoordinates coord = getReferenceCoord();
+		return new ChunkCoordinates(coord);
 	}
 
 	@Override
 	public void onSwitchAccess(EnumAccess oldAccess, EnumAccess newAccess) {
-		PacketGuiUpdate packet = new PacketGuiUpdate(this);
-		Proxies.net.sendNetworkPacket(packet, worldObj);
-
 		if (oldAccess == EnumAccess.SHARED || newAccess == EnumAccess.SHARED) {
 			// pipes connected to this need to update
-			for (IMultiblockPart part : connectedParts) {
-				if (part instanceof MultiblockTileEntityBase) {
-					MultiblockTileEntityBase tile = (MultiblockTileEntityBase) part;
-					tile.notifyNeighborsOfBlockChange();
+			for (IMultiblockComponent part : connectedParts) {
+				if (part instanceof TileEntity) {
+					TileEntity tile = (TileEntity) part;
+					tile.getWorldObj().notifyBlocksOfNeighborChange(tile.xCoord, tile.yCoord, tile.zCoord, tile.getBlockType());
 				}
 			}
 			markDirty();
@@ -381,7 +355,6 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-		super.writeGuiData(data);
 		tankManager.writeData(data);
 		hydrationManager.writeData(data);
 		fertilizerManager.writeData(data);
@@ -389,7 +362,6 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public void readGuiData(DataInputStreamForestry data) throws IOException {
-		super.readGuiData(data);
 		tankManager.readData(data);
 		hydrationManager.readData(data);
 		fertilizerManager.readData(data);
@@ -412,8 +384,8 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public EnumTemperature getTemperature() {
-		CoordTriplet coords = getReferenceCoord();
-		return EnumTemperature.getFromBiome(getBiome(), coords.x, coords.y, coords.z);
+		ChunkCoordinates coords = getReferenceCoord();
+		return EnumTemperature.getFromBiome(getBiome(), coords.posX, coords.posY, coords.posZ);
 	}
 
 	@Override
@@ -423,8 +395,8 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public float getExactTemperature() {
-		CoordTriplet coords = getReferenceCoord();
-		return getBiome().getFloatTemperature(coords.x, coords.y, coords.z);
+		ChunkCoordinates coords = getReferenceCoord();
+		return getBiome().getFloatTemperature(coords.posX, coords.posY, coords.posZ);
 	}
 
 	@Override
@@ -439,8 +411,8 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	@Override
 	public int[] getCoords() {
 		if (coords == null) {
-			CoordTriplet centerCoord = getCenterCoord();
-			coords = new int[]{centerCoord.x, centerCoord.y, centerCoord.z};
+			ChunkCoordinates centerCoord = getCenterCoord();
+			coords = new int[]{centerCoord.posX, centerCoord.posY, centerCoord.posZ};
 		}
 		return coords;
 	}
@@ -476,12 +448,12 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 		if (!pendingProduce.isEmpty()) {
 			boolean added = inventory.tryAddPendingProduce(pendingProduce);
-			errorLogic.setCondition(!added, EnumErrorCode.NOSPACE);
+			errorLogic.setCondition(!added, EnumErrorCode.NO_SPACE_INVENTORY);
 			return added;
 		}
 
 		boolean hasFertilizer = fertilizerManager.maintainFertilizer(inventory);
-		if (errorLogic.setCondition(!hasFertilizer, EnumErrorCode.NOFERTILIZER)) {
+		if (errorLogic.setCondition(!hasFertilizer, EnumErrorCode.NO_FERTILIZER)) {
 			return false;
 		}
 
@@ -534,9 +506,9 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 		}
 
 		if (stage == Stage.CULTIVATE) {
-			errorLogic.setCondition(!farmWorkStatus.hasFarmland, EnumErrorCode.NOFARMLAND);
-			errorLogic.setCondition(!farmWorkStatus.hasFertilizer, EnumErrorCode.NOFERTILIZER);
-			errorLogic.setCondition(!farmWorkStatus.hasLiquid, EnumErrorCode.NOLIQUID);
+			errorLogic.setCondition(!farmWorkStatus.hasFarmland, EnumErrorCode.NO_FARMLAND);
+			errorLogic.setCondition(!farmWorkStatus.hasFertilizer, EnumErrorCode.NO_FERTILIZER);
+			errorLogic.setCondition(!farmWorkStatus.hasLiquid, EnumErrorCode.NO_LIQUID_FARM);
 		}
 
 		// alternate between cultivation and harvest.
@@ -548,11 +520,11 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 	private void setUpFarmlandTargets() {
 		Vect targetStart = new Vect(getCoords());
 
-		CoordTriplet max = getMaximumCoord();
-		CoordTriplet min = getMinimumCoord();
+		ChunkCoordinates max = getMaximumCoord();
+		ChunkCoordinates min = getMinimumCoord();
 
-		int sizeNorthSouth = Math.abs(max.z - min.z) + 1;
-		int sizeEastWest = Math.abs(max.x - min.x) + 1;
+		int sizeNorthSouth = Math.abs(max.posZ - min.posZ) + 1;
+		int sizeEastWest = Math.abs(max.posX - min.posX) + 1;
 
 		// Set the maximum allowed extent.
 		allowedExtent = Math.max(sizeNorthSouth, sizeEastWest) * Config.farmSize + 1;
@@ -761,7 +733,7 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 		// Check fertilizer
 		Boolean hasFertilizer = fertilizerManager.hasFertilizer(fertilizerConsumption);
-		if (errorLogic.setCondition(!hasFertilizer, EnumErrorCode.NOFERTILIZER)) {
+		if (errorLogic.setCondition(!hasFertilizer, EnumErrorCode.NO_FERTILIZER)) {
 			return false;
 		}
 
@@ -771,13 +743,13 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 		FluidStack requiredLiquid = Fluids.WATER.getFluid(waterConsumption);
 		boolean hasLiquid = requiredLiquid.amount == 0 || hasLiquid(requiredLiquid);
 
-		if (errorLogic.setCondition(!hasLiquid, EnumErrorCode.NOLIQUID)) {
+		if (errorLogic.setCondition(!hasLiquid, EnumErrorCode.NO_LIQUID_FARM)) {
 			return false;
 		}
 
 		Collection<ItemStack> harvested = crop.harvest();
 		if (harvested == null) {
-			Log.fine("Failed to harvest crop: " + crop.toString());
+			Log.fine("Failed to harvest crop: " + crop);
 			return true;
 		}
 

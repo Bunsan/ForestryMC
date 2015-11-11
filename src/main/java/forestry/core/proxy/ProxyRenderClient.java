@@ -28,6 +28,7 @@ import cpw.mods.fml.common.registry.VillagerRegistry;
 
 import forestry.apiculture.entities.EntityFXBee;
 import forestry.apiculture.render.ParticleRenderer;
+import forestry.apiculture.render.RenderCandleBlock;
 import forestry.apiculture.render.TextureHabitatLocator;
 import forestry.core.config.Config;
 import forestry.core.entities.EntityFXHoneydust;
@@ -47,9 +48,27 @@ import forestry.core.tiles.MachineDefinition;
 
 public class ProxyRenderClient extends ProxyRender {
 
+	private int byBlockModelId;
+	private int candleRenderId;
+
 	@Override
-	public int getNextAvailableRenderId() {
-		return RenderingRegistry.getNextAvailableRenderId();
+	public void init() {
+		byBlockModelId = RenderingRegistry.getNextAvailableRenderId();
+		candleRenderId = RenderingRegistry.getNextAvailableRenderId();
+
+		RenderBlock renderHandler = new RenderBlock();
+		RenderingRegistry.registerBlockHandler(byBlockModelId, renderHandler);
+		RenderingRegistry.registerBlockHandler(candleRenderId, new RenderCandleBlock());
+	}
+
+	@Override
+	public int getCandleRenderId() {
+		return candleRenderId;
+	}
+
+	@Override
+	public int getByBlockModelRenderId() {
+		return byBlockModelId;
 	}
 
 	@Override
@@ -141,12 +160,12 @@ public class ProxyRenderClient extends ProxyRender {
 	}
 
 	@Override
-	public void addBeeHiveFX(String icon, World world, ChunkCoordinates coordinates, int color) {
+	public void addBeeHiveFX(String icon, World world, double d1, double d2, double d3, int color) {
 		if (!shouldSpawnParticle(world)) {
 			return;
 		}
 
-		EntityFX fx = new EntityFXBee(world, coordinates.posX + 0.5D, coordinates.posY + 0.5D, coordinates.posZ + 0.5D, color);
+		EntityFX fx = new EntityFXBee(world, d1, d2, d3, color);
 		fx.setParticleIcon(TextureManager.getInstance().getDefault(icon));
 		ParticleRenderer.getInstance().addEffect(fx);
 	}

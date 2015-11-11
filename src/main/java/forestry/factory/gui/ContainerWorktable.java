@@ -25,6 +25,7 @@ import forestry.core.gui.slots.SlotCrafter;
 import forestry.core.network.PacketGuiSelectRequest;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.ItemStackUtil;
+import forestry.factory.inventory.InventoryWorktable;
 import forestry.factory.network.PacketWorktableMemoryUpdate;
 import forestry.factory.recipes.RecipeMemory;
 import forestry.factory.tiles.TileWorktable;
@@ -43,7 +44,7 @@ public class ContainerWorktable extends ContainerTile<TileWorktable> implements 
 		// Internal inventory
 		for (int i = 0; i < 2; i++) {
 			for (int k = 0; k < 9; k++) {
-				addSlotToContainer(new Slot(internalInventory, TileWorktable.SLOT_INVENTORY_1 + k + i * 9, 8 + k * 18, 90 + i * 18));
+				addSlotToContainer(new Slot(internalInventory, InventoryWorktable.SLOT_INVENTORY_1 + k + i * 9, 8 + k * 18, 90 + i * 18));
 			}
 		}
 
@@ -55,11 +56,10 @@ public class ContainerWorktable extends ContainerTile<TileWorktable> implements 
 		}
 
 		// CraftResult display
-		addSlotToContainer(new SlotCrafter(player, craftingInventory, tile, TileWorktable.SLOT_CRAFTING_RESULT, 77, 38));
+		addSlotToContainer(new SlotCrafter(player, craftingInventory, tile, InventoryWorktable.SLOT_CRAFTING_RESULT, 77, 38));
 
 		// Update crafting matrix with current contents of tileentity.
 		updateMatrix();
-		updateRecipe();
 	}
 
 	@Override
@@ -76,6 +76,11 @@ public class ContainerWorktable extends ContainerTile<TileWorktable> implements 
 	}
 
 	@Override
+	public void onCraftMatrixChanged(IInventory iinventory) {
+		updateRecipe();
+	}
+
+	@Override
 	public void onCraftMatrixChanged(IInventory iinventory, int slot) {
 		if (slot >= craftMatrix.getSizeInventory()) {
 			return;
@@ -86,7 +91,6 @@ public class ContainerWorktable extends ContainerTile<TileWorktable> implements 
 
 		if (!ItemStackUtil.isIdenticalItem(stack, currentStack)) {
 			craftMatrix.setInventorySlotContents(slot, stack);
-			updateRecipe();
 		}
 	}
 

@@ -17,9 +17,12 @@ import java.util.Collections;
 import java.util.Set;
 import java.util.Stack;
 
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTTagList;
+import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 
 import forestry.api.apiculture.BeeManager;
@@ -35,7 +38,8 @@ import forestry.api.core.IErrorLogic;
 import forestry.api.core.IErrorState;
 import forestry.api.genetics.IEffectData;
 import forestry.api.genetics.IIndividual;
-import forestry.apiculture.network.PacketBeekeepingLogicActive;
+import forestry.apiculture.network.PacketBeeLogicActive;
+import forestry.apiculture.network.PacketBeeLogicActiveEntity;
 import forestry.core.config.Constants;
 import forestry.core.config.ForestryItem;
 import forestry.core.errors.EnumErrorCode;
@@ -162,14 +166,14 @@ public class BeekeepingLogic implements IBeekeepingLogic, IStreamable {
 		IBeeHousingInventory beeInventory = housing.getBeeInventory();
 
 		boolean hasSpace = addPendingProducts(beeInventory, spawn);
-		errorLogic.setCondition(!hasSpace, EnumErrorCode.NOSPACE);
+		errorLogic.setCondition(!hasSpace, EnumErrorCode.NO_SPACE_INVENTORY);
 
 		ItemStack queenStack = beeInventory.getQueen();
 
 		// check if we're breeding
 		if (ForestryItem.beePrincessGE.isItemEqual(queenStack)) {
 			boolean hasDrone = BeeManager.beeRoot.isDrone(beeInventory.getDrone());
-			errorLogic.setCondition(!hasDrone, EnumErrorCode.NODRONE);
+			errorLogic.setCondition(!hasDrone, EnumErrorCode.NO_DRONE);
 
 			setActive(false); // not active (no bee FX) when we are breeding
 			return !errorLogic.hasErrors();
@@ -191,7 +195,7 @@ public class BeekeepingLogic implements IBeekeepingLogic, IStreamable {
 			this.queenStack = queenStack;
 		}
 
-		if (errorLogic.setCondition(queen == null, EnumErrorCode.NOQUEEN)) {
+		if (errorLogic.setCondition(queen == null, EnumErrorCode.NO_QUEEN)) {
 			setActive(false);
 			beeProgress = 0;
 			return false;
@@ -203,7 +207,7 @@ public class BeekeepingLogic implements IBeekeepingLogic, IStreamable {
 		}
 
 		boolean hasFlowers = hasFlowersCache.hasFlowers(queen, housing);
-		errorLogic.setCondition(!hasFlowers, EnumErrorCode.NOFLOWER);
+		errorLogic.setCondition(!hasFlowers, EnumErrorCode.NO_FLOWER);
 
 		boolean canWork = !errorLogic.hasErrors();
 		setActive(canWork);
@@ -418,7 +422,23 @@ public class BeekeepingLogic implements IBeekeepingLogic, IStreamable {
 	public void syncToClient() {
 		World world = housing.getWorld();
 		if (world != null && !world.isRemote) {
-			Proxies.net.sendNetworkPacket(new PacketBeekeepingLogicActive(housing), world);
+			if (housing instanceof Entity) {
+				Proxies.net.sendNetworkPacket(new PacketBeeLogicActiveEntity(housing, (Entity) housing), world);
+			} else {
+				Proxies.net.sendNetworkPacket(new PacketBeeLogicActive(housing), world);
+			}
+		}
+	}
+
+	@Override
+	public void syncToClient(EntityPlayerMP player) {
+		World world = housing.getWorld();
+		if (world != null && !world.isRemote) {
+			if (housing instanceof TileEntity) {
+				Proxies.net.sendToPlayer(new PacketBeeLogicActive(housing), player);
+			} else if (housing instanceof Entity) {
+				Proxies.net.sendToPlayer(new PacketBeeLogicActiveEntity(housing, (Entity) housing), player);
+			}
 		}
 	}
 

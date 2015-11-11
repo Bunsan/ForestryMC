@@ -27,7 +27,6 @@ import net.minecraftforge.common.MinecraftForge;
 
 import cpw.mods.fml.common.SidedProxy;
 import cpw.mods.fml.common.event.FMLInterModComms.IMCMessage;
-import cpw.mods.fml.common.network.IGuiHandler;
 import cpw.mods.fml.common.registry.GameData;
 import cpw.mods.fml.common.registry.GameRegistry;
 
@@ -36,6 +35,7 @@ import forestry.api.circuits.CircuitSocketType;
 import forestry.api.circuits.ICircuitLayout;
 import forestry.api.farming.Farmables;
 import forestry.api.farming.IFarmable;
+import forestry.core.GuiHandlerBase;
 import forestry.core.circuits.Circuit;
 import forestry.core.circuits.CircuitLayout;
 import forestry.core.config.Constants;
@@ -87,10 +87,18 @@ public class PluginFarming extends ForestryPlugin {
 	public static ItemStack farmFertilizer;
 
 	@Override
-	public void preInit() {
-		super.preInit();
+	protected void registerItemsAndBlocks() {
+		super.registerItemsAndBlocks();
 
 		ForestryBlock.mushroom.registerBlock(new BlockMushroom(), ItemBlockTyped.class, "mushroom");
+
+		ForestryBlock.farm.registerBlock(new BlockFarm(), ItemBlockFarm.class, "ffarm");
+		ForestryBlock.farm.block().setHarvestLevel("pickaxe", 0);
+	}
+
+	@Override
+	public void preInit() {
+		super.preInit();
 
 		Farmables.farmables.put("farmArboreal", new ArrayList<IFarmable>());
 		Farmables.farmables.get("farmArboreal").add(new FarmableVanillaSapling());
@@ -128,11 +136,6 @@ public class PluginFarming extends ForestryPlugin {
 		Farmables.farmables.get("farmVegetables").add(new FarmableGenericCrop(new ItemStack(Items.potato), Blocks.potatoes, 7));
 		Farmables.farmables.get("farmVegetables").add(new FarmableGenericCrop(new ItemStack(Items.carrot), Blocks.carrots, 7));
 
-		ForestryBlock.farm.registerBlock(new BlockFarm(), ItemBlockFarm.class, "ffarm");
-		/*Item.itemsList[ForestryBlock.farm] = null;
-		 Item.itemsList[ForestryBlock.farm] = (new ItemBlockFarm(ForestryBlock.farm - 256, "ffarm"));*/
-		ForestryBlock.farm.block().setHarvestLevel("pickaxe", 0);
-
 		proxy.initializeRendering();
 
 		// Layouts
@@ -150,6 +153,8 @@ public class PluginFarming extends ForestryPlugin {
 	@Override
 	public void doInit() {
 		super.doInit();
+
+		farmFertilizer = ForestryItem.fertilizerCompound.getItemStack();
 
 		GameRegistry.registerTileEntity(TileFarmPlain.class, "forestry.Farm");
 		GameRegistry.registerTileEntity(TileGearbox.class, "forestry.FarmGearbox");
@@ -176,12 +181,6 @@ public class PluginFarming extends ForestryPlugin {
 		Circuit.farmOrchardManual = new CircuitFarmLogic("manualOrchard", FarmLogicOrchard.class);
 
 		MinecraftForge.EVENT_BUS.register(new EventHandlerFarming());
-	}
-
-	@Override
-	public void postInit() {
-		super.postInit();
-		farmFertilizer = ForestryItem.fertilizerCompound.getItemStack();
 	}
 
 	@Override
@@ -285,7 +284,7 @@ public class PluginFarming extends ForestryPlugin {
 	}
 
 	@Override
-	public IGuiHandler getGuiHandler() {
+	public GuiHandlerBase getGuiHandler() {
 		return new GuiHandlerFarming();
 	}
 

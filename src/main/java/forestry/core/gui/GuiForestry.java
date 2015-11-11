@@ -36,6 +36,7 @@ import org.lwjgl.opengl.GL12;
 
 import forestry.api.core.IErrorLogicSource;
 import forestry.api.core.IErrorSource;
+import forestry.core.access.IRestrictedAccess;
 import forestry.core.config.Config;
 import forestry.core.gui.ledgers.ClimateLedger;
 import forestry.core.gui.ledgers.HintLedger;
@@ -51,7 +52,6 @@ import forestry.core.proxy.Proxies;
 import forestry.core.render.FontColour;
 import forestry.core.tiles.IClimatised;
 import forestry.core.tiles.IPowerHandler;
-import forestry.core.tiles.TileForestry;
 
 import codechicken.nei.VisiblityData;
 import codechicken.nei.api.INEIGuiHandler;
@@ -65,7 +65,7 @@ public abstract class GuiForestry<C extends Container, I extends IInventory> ext
 	protected final C container;
 	protected final FontColour fontColor;
 	public final ResourceLocation textureFile;
-	protected WidgetManager widgetManager;
+	protected final WidgetManager widgetManager;
 	protected LedgerManager ledgerManager;
 
 	protected GuiForestry(String texture, C container, I inventory) {
@@ -110,13 +110,23 @@ public abstract class GuiForestry<C extends Container, I extends IInventory> ext
 			ledgerManager.add(new PowerLedger(ledgerManager, (IPowerHandler) inventory));
 		}
 
-		if (Config.enableHints && inventory instanceof IHintSource && ((IHintSource) inventory).hasHints()) {
-			ledgerManager.add(new HintLedger(ledgerManager, (IHintSource) inventory));
+		if (Config.enableHints && inventory instanceof IHintSource) {
+			IHintSource hintSource = (IHintSource) inventory;
+			List<String> hints = hintSource.getHints();
+			if (hints != null && hints.size() > 0) {
+				ledgerManager.add(new HintLedger(ledgerManager, hintSource));
+			}
 		}
 
-		if (inventory instanceof TileForestry) {
-			ledgerManager.add(new OwnerLedger(ledgerManager, (TileForestry) inventory));
+		if (inventory instanceof IRestrictedAccess) {
+			ledgerManager.add(new OwnerLedger(ledgerManager, (IRestrictedAccess) inventory));
 		}
+	}
+
+	@Override
+	public void onGuiClosed() {
+		super.onGuiClosed();
+		ledgerManager.onGuiClosed();
 	}
 
 	/* TEXT HELPER FUNCTIONS */

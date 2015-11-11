@@ -10,13 +10,21 @@
  ******************************************************************************/
 package forestry.apiculture.genetics.alleles;
 
+import java.util.Arrays;
+import java.util.List;
+
+import net.minecraft.potion.Potion;
 import net.minecraft.util.AxisAlignedBB;
+import net.minecraft.util.ChunkCoordinates;
+import net.minecraft.util.Vec3;
 
 import forestry.api.apiculture.BeeManager;
+import forestry.api.apiculture.EnumBeeChromosome;
 import forestry.api.apiculture.IAlleleBeeEffect;
 import forestry.api.apiculture.IBeeGenome;
 import forestry.api.apiculture.IBeeHousing;
 import forestry.api.apiculture.IBeeModifier;
+import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IEffectData;
 import forestry.core.genetics.alleles.AlleleCategorized;
 import forestry.core.proxy.Proxies;
@@ -45,6 +53,34 @@ public abstract class AlleleEffect extends AlleleCategorized implements IAlleleB
 	public static IAlleleBeeEffect effectFertile;
 	public static IAlleleBeeEffect effectMycophilic;
 
+	public static void createAlleles() {
+		List<IAlleleBeeEffect> beeEffects = Arrays.asList(
+				effectNone = new AlleleEffectNone("none", true),
+				effectAggressive = new AlleleEffectAggressive(),
+				effectHeroic = new AlleleEffectHeroic(),
+				effectBeatific = new AlleleEffectPotion("beatific", false, Potion.regeneration, 100),
+				effectMiasmic = new AlleleEffectPotion("miasmic", false, Potion.poison, 600, 100, 0.1f),
+				effectMisanthrope = new AlleleEffectMisanthrope(),
+				effectGlacial = new AlleleEffectGlacial(),
+				effectRadioactive = new AlleleEffectRadioactive(),
+				effectCreeper = new AlleleEffectCreeper(),
+				effectIgnition = new AlleleEffectIgnition(),
+				effectExploration = new AlleleEffectExploration(),
+				effectFestiveEaster = new AlleleEffectNone("festiveEaster", true),
+				effectSnowing = new AlleleEffectSnowing(),
+				effectDrunkard = new AlleleEffectPotion("drunkard", false, Potion.confusion, 100),
+				effectReanimation = new AlleleEffectResurrection("reanimation", AlleleEffectResurrection.getReanimationList()),
+				effectResurrection = new AlleleEffectResurrection("resurrection", AlleleEffectResurrection.getResurrectionList()),
+				effectRepulsion = new AlleleEffectRepulsion(),
+				effectFertile = new AlleleEffectFertile(),
+				effectMycophilic = new AlleleEffectFungification()
+		);
+
+		for (IAlleleBeeEffect beeEffect : beeEffects) {
+			AlleleManager.alleleRegistry.registerAllele(beeEffect, EnumBeeChromosome.EFFECT);
+		}
+	}
+
 	protected AlleleEffect(String valueName, boolean isDominant) {
 		super("forestry", "effect", valueName, isDominant);
 	}
@@ -66,8 +102,19 @@ public abstract class AlleleEffect extends AlleleCategorized implements IAlleleB
 
 	@Override
 	public IEffectData doFX(IBeeGenome genome, IEffectData storedData, IBeeHousing housing) {
-		Proxies.render.addBeeHiveFX("particles/swarm_bee", housing.getWorld(), housing.getCoordinates(), genome.getPrimary().getIconColour(0));
+		Vec3 beeFXCoordinates = getFXCoordinates(housing);
+		Proxies.render.addBeeHiveFX("particles/swarm_bee", housing.getWorld(), beeFXCoordinates.xCoord, beeFXCoordinates.yCoord, beeFXCoordinates.zCoord, genome.getPrimary().getIconColour(0));
 		return storedData;
+	}
+
+	protected Vec3 getFXCoordinates(IBeeHousing housing) {
+		try {
+			return housing.getBeeFXCoordinates();
+		} catch (Throwable error) {
+			// getBeeFXCoordinates() is only newly added to the API, fall back on getCoordinates()
+			ChunkCoordinates coordinates = housing.getCoordinates();
+			return Vec3.createVectorHelper(coordinates.posX + 0.5D, coordinates.posY + 0.5D, coordinates.posZ + 0.5D);
+		}
 	}
 
 	protected Vect getModifiedArea(IBeeGenome genome, IBeeHousing housing) {

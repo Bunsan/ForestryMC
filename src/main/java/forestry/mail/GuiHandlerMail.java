@@ -10,12 +10,19 @@
  ******************************************************************************/
 package forestry.mail;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
 
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
+
 import forestry.core.GuiHandlerBase;
+import forestry.core.config.ForestryItem;
 import forestry.core.network.GuiId;
+import forestry.core.tiles.TileUtil;
 import forestry.mail.gui.ContainerCatalogue;
 import forestry.mail.gui.ContainerLetter;
 import forestry.mail.gui.ContainerMailbox;
@@ -28,17 +35,17 @@ import forestry.mail.gui.GuiMailbox;
 import forestry.mail.gui.GuiPhilatelist;
 import forestry.mail.gui.GuiTradeName;
 import forestry.mail.gui.GuiTrader;
-import forestry.mail.items.ItemCatalogue;
+import forestry.mail.inventory.ItemInventoryLetter;
 import forestry.mail.items.ItemLetter;
-import forestry.mail.items.ItemLetter.LetterInventory;
 import forestry.mail.tiles.TileMailbox;
 import forestry.mail.tiles.TilePhilatelist;
 import forestry.mail.tiles.TileTrader;
 
 public class GuiHandlerMail extends GuiHandlerBase {
 
+	@SideOnly(Side.CLIENT)
 	@Override
-	public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Gui getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -51,7 +58,7 @@ public class GuiHandlerMail extends GuiHandlerBase {
 					return null;
 				}
 
-				if (cata.getItem() instanceof ItemCatalogue) {
+				if (ForestryItem.catalogue.isItemEqual(cata)) {
 					return new GuiCatalogue(player);
 				} else {
 					return null;
@@ -64,19 +71,19 @@ public class GuiHandlerMail extends GuiHandlerBase {
 				}
 
 				if (equipped.getItem() instanceof ItemLetter) {
-					return new GuiLetter(player, new LetterInventory(player, equipped));
+					return new GuiLetter(player, new ItemInventoryLetter(player, equipped));
 				} else {
 					return null;
 				}
 
 			case MailboxGUI:
-				return new GuiMailbox(player.inventory, getTile(world, x, y, z, player, TileMailbox.class));
+				return new GuiMailbox(player.inventory, TileUtil.getTile(world, x, y, z, TileMailbox.class));
 			case PhilatelistGUI:
-				return new GuiPhilatelist(player.inventory, getTile(world, x, y, z, player, TilePhilatelist.class));
+				return new GuiPhilatelist(player.inventory, TileUtil.getTile(world, x, y, z, TilePhilatelist.class));
 			case TraderGUI:
-				return new GuiTrader(player.inventory, getTile(world, x, y, z, player, TileTrader.class));
+				return new GuiTrader(player.inventory, TileUtil.getTile(world, x, y, z, TileTrader.class));
 			case TraderNameGUI:
-				return new GuiTradeName(getTile(world, x, y, z, player, TileTrader.class));
+				return new GuiTradeName(TileUtil.getTile(world, x, y, z, TileTrader.class));
 			default:
 				return null;
 
@@ -84,7 +91,7 @@ public class GuiHandlerMail extends GuiHandlerBase {
 	}
 
 	@Override
-	public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Container getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -97,7 +104,7 @@ public class GuiHandlerMail extends GuiHandlerBase {
 					return null;
 				}
 
-				if (cata.getItem() instanceof ItemCatalogue) {
+				if (ForestryItem.catalogue.isItemEqual(cata)) {
 					return new ContainerCatalogue(player);
 				} else {
 					return null;
@@ -110,19 +117,19 @@ public class GuiHandlerMail extends GuiHandlerBase {
 				}
 
 				if (equipped.getItem() instanceof ItemLetter) {
-					return new ContainerLetter(player, new LetterInventory(player, equipped));
+					return new ContainerLetter(player, new ItemInventoryLetter(player, equipped));
 				} else {
 					return null;
 				}
 
 			case MailboxGUI:
-				return new ContainerMailbox(player.inventory, getTile(world, x, y, z, player, TileMailbox.class));
+				return new ContainerMailbox(player.inventory, TileUtil.getTile(world, x, y, z, TileMailbox.class));
 			case PhilatelistGUI:
-				return new ContainerPhilatelist(player.inventory, getTile(world, x, y, z, player, TilePhilatelist.class));
+				return new ContainerPhilatelist(player.inventory, TileUtil.getTile(world, x, y, z, TilePhilatelist.class));
 			case TraderGUI:
-				return new ContainerTrader(player.inventory, getTile(world, x, y, z, player, TileTrader.class));
+				return new ContainerTrader(player.inventory, TileUtil.getTile(world, x, y, z, TileTrader.class));
 			case TraderNameGUI:
-				return new ContainerTradeName(getTile(world, x, y, z, player, TileTrader.class));
+				return new ContainerTradeName(TileUtil.getTile(world, x, y, z, TileTrader.class));
 			default:
 				return null;
 

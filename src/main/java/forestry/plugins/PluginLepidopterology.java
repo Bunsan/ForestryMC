@@ -14,13 +14,13 @@ import java.io.File;
 import java.util.EnumSet;
 
 import net.minecraft.block.material.Material;
+import net.minecraft.item.Item;
 import net.minecraft.item.crafting.CraftingManager;
 
 import net.minecraftforge.oredict.OreDictionary;
 import net.minecraftforge.oredict.RecipeSorter;
 
 import cpw.mods.fml.common.SidedProxy;
-import cpw.mods.fml.common.network.IGuiHandler;
 
 import forestry.Forestry;
 import forestry.api.arboriculture.TreeManager;
@@ -29,6 +29,7 @@ import forestry.api.genetics.AlleleManager;
 import forestry.api.lepidopterology.ButterflyManager;
 import forestry.api.lepidopterology.EnumFlutterType;
 import forestry.api.recipes.RecipeManagers;
+import forestry.core.GuiHandlerBase;
 import forestry.core.blocks.BlockBase;
 import forestry.core.config.Constants;
 import forestry.core.config.ForestryBlock;
@@ -36,24 +37,23 @@ import forestry.core.config.ForestryItem;
 import forestry.core.config.LocalizedConfiguration;
 import forestry.core.fluids.Fluids;
 import forestry.core.items.ItemBlockForestry;
+import forestry.core.items.ItemWithGui;
+import forestry.core.network.GuiId;
 import forestry.core.proxy.Proxies;
 import forestry.core.recipes.ShapedRecipeCustom;
 import forestry.core.tiles.MachineDefinition;
 import forestry.core.utils.EntityUtil;
-import forestry.core.utils.Log;
 import forestry.lepidopterology.ButterflySpawner;
 import forestry.lepidopterology.GuiHandlerLepidopterology;
 import forestry.lepidopterology.commands.CommandButterfly;
 import forestry.lepidopterology.entities.EntityButterfly;
-import forestry.lepidopterology.genetics.AlleleEffect;
-import forestry.lepidopterology.genetics.AlleleEffectNone;
+import forestry.lepidopterology.genetics.AlleleButterflyEffect;
 import forestry.lepidopterology.genetics.ButterflyBranchDefinition;
 import forestry.lepidopterology.genetics.ButterflyDefinition;
 import forestry.lepidopterology.genetics.ButterflyFactory;
 import forestry.lepidopterology.genetics.ButterflyHelper;
 import forestry.lepidopterology.genetics.MothDefinition;
 import forestry.lepidopterology.items.ItemButterflyGE;
-import forestry.lepidopterology.items.ItemFlutterlyzer;
 import forestry.lepidopterology.proxy.ProxyLepidopterology;
 import forestry.lepidopterology.recipes.MatingRecipe;
 import forestry.lepidopterology.tiles.TileLepidopteristChest;
@@ -79,12 +79,21 @@ public class PluginLepidopterology extends ForestryPlugin {
 	}
 
 	@Override
-	public void preInit() {
+	protected void registerItemsAndBlocks() {
+		Item flutterlyzer = new ItemWithGui(GuiId.FlutterlyzerGUI).setCreativeTab(Tabs.tabLepidopterology);
+		ForestryItem.flutterlyzer.registerItem(flutterlyzer, "flutterlyzer");
+		ForestryItem.butterflyGE.registerItem(new ItemButterflyGE(EnumFlutterType.BUTTERFLY), "butterflyGE");
+		ForestryItem.serumGE.registerItem(new ItemButterflyGE(EnumFlutterType.SERUM), "serumGE");
+		ForestryItem.caterpillarGE.registerItem(new ItemButterflyGE(EnumFlutterType.CATERPILLAR), "caterpillarGE");
+
 		ForestryBlock.lepidopterology.registerBlock(new BlockBase(Material.iron, true), ItemBlockForestry.class, "lepidopterology");
 		ForestryBlock.lepidopterology.block().setCreativeTab(Tabs.tabLepidopterology);
+	}
 
+	@Override
+	public void preInit() {
 		ButterflyBranchDefinition.createAlleles();
-		AlleleEffect.butterflyNone = new AlleleEffectNone();
+		AlleleButterflyEffect.createAlleles();
 	}
 
 	@Override
@@ -96,22 +105,8 @@ public class PluginLepidopterology extends ForestryPlugin {
 
 	@Override
 	public void doInit() {
-		final String oldConfig = CONFIG_CATEGORY + ".conf";
-		final String newConfig = CONFIG_CATEGORY + ".cfg";
-
-		File configFile = new File(Forestry.instance.getConfigFolder(), newConfig);
-		File oldConfigFile = new File(Forestry.instance.getConfigFolder(), oldConfig);
-		if (oldConfigFile.exists()) {
-			loadOldConfig();
-
-			final String oldConfigRenamed = CONFIG_CATEGORY + ".conf.old";
-			File oldConfigFileRenamed = new File(Forestry.instance.getConfigFolder(), oldConfigRenamed);
-			if (oldConfigFile.renameTo(oldConfigFileRenamed)) {
-				Log.info("Migrated " + CONFIG_CATEGORY + " settings to the new file '" + newConfig + "' and renamed '" + oldConfig + "' to '" + oldConfigRenamed + "'.");
-			}
-		}
-
-		loadNewConfig(configFile);
+		File configFile = new File(Forestry.instance.getConfigFolder(), CONFIG_CATEGORY + ".cfg");
+		loadConfig(configFile);
 
 		PluginCore.rootCommand.addChildCommand(new CommandButterfly());
 
@@ -139,7 +134,7 @@ public class PluginLepidopterology extends ForestryPlugin {
 		RecipeSorter.register("forestry:lepidopterologymating", MatingRecipe.class, RecipeSorter.Category.SHAPELESS, "before:minecraft:shapeless");
 	}
 
-	private static void loadNewConfig(File configFile) {
+	private static void loadConfig(File configFile) {
 		LocalizedConfiguration config = new LocalizedConfiguration(configFile, "1.0.0");
 
 		spawnConstraint = config.getIntLocalized("butterfly.entities", "spawn.limit", spawnConstraint, 0, 500);
@@ -147,30 +142,6 @@ public class PluginLepidopterology extends ForestryPlugin {
 		allowPollination = config.getBooleanLocalized("butterfly.entities", "pollination", allowPollination);
 
 		config.save();
-	}
-
-	private static void loadOldConfig() {
-		forestry.core.config.deprecated.Configuration config = new forestry.core.config.deprecated.Configuration();
-
-		forestry.core.config.deprecated.Property property = config.get("entities.spawn.limit", CONFIG_CATEGORY, spawnConstraint);
-		property.comment = "determines the global butterfly entity count above which natural spawning of butterflies ceases.";
-		spawnConstraint = Integer.parseInt(property.value);
-
-		property = config.get("entities.maximum.allowed", CONFIG_CATEGORY, entityConstraint);
-		property.comment = "determines the global butterfly entity count above which butterflies will stay in item form and will not take flight anymore.";
-		entityConstraint = Integer.parseInt(property.value);
-
-		property = config.get("entities.pollination.allowed", CONFIG_CATEGORY, allowPollination);
-		property.comment = "determines whether butterflies can pollinate leaves.";
-		allowPollination = Boolean.parseBoolean(property.value);
-	}
-
-	@Override
-	protected void registerItems() {
-		ForestryItem.flutterlyzer.registerItem(new ItemFlutterlyzer(), "flutterlyzer");
-		ForestryItem.butterflyGE.registerItem(new ItemButterflyGE(EnumFlutterType.BUTTERFLY), "butterflyGE");
-		ForestryItem.serumGE.registerItem(new ItemButterflyGE(EnumFlutterType.SERUM), "serumGE");
-		ForestryItem.caterpillarGE.registerItem(new ItemButterflyGE(EnumFlutterType.CATERPILLAR), "caterpillarGE");
 	}
 
 	@SuppressWarnings("unchecked")
@@ -184,7 +155,7 @@ public class PluginLepidopterology extends ForestryPlugin {
 	}
 
 	@Override
-	public IGuiHandler getGuiHandler() {
+	public GuiHandlerBase getGuiHandler() {
 		return new GuiHandlerLepidopterology();
 	}
 

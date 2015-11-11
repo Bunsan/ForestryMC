@@ -25,6 +25,9 @@ import forestry.core.utils.InventoryUtil;
 public abstract class TileUtil {
 
 	public static boolean isUsableByPlayer(EntityPlayer player, TileEntity tile) {
+		if (tile == null) {
+			return false;
+		}
 		int x = tile.xCoord;
 		int y = tile.yCoord;
 		int z = tile.zCoord;
@@ -52,7 +55,7 @@ public abstract class TileUtil {
 	}
 
 	public static IInventory getInventoryFromTile(TileEntity tile, ForgeDirection side) {
-		if (tile == null || !(tile instanceof IInventory)) {
+		if (!(tile instanceof IInventory)) {
 			return null;
 		}
 

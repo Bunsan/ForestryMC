@@ -11,35 +11,35 @@
 package forestry.farming.tiles;
 
 import java.io.IOException;
+import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.ChunkCoordinates;
-import net.minecraft.util.StatCollector;
 
 import forestry.api.circuits.ICircuitSocketType;
 import forestry.api.core.ForestryAPI;
 import forestry.api.core.IErrorLogic;
 import forestry.api.core.IErrorLogicSource;
-import forestry.api.farming.IFarmComponent;
+import forestry.api.multiblock.IFarmComponent;
+import forestry.api.multiblock.IMultiblockController;
+import forestry.core.access.EnumAccess;
+import forestry.core.access.IAccessHandler;
+import forestry.core.access.IRestrictedAccess;
 import forestry.core.circuits.ISocketable;
 import forestry.core.config.Config;
 import forestry.core.gui.IHintSource;
 import forestry.core.inventory.IInventoryAdapter;
-import forestry.core.multiblock.MultiblockControllerBase;
-import forestry.core.multiblock.MultiblockValidationException;
-import forestry.core.multiblock.rectangular.RectangularMultiblockTileEntityBase;
+import forestry.core.multiblock.MultiblockTileEntityForestry;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
 import forestry.core.network.GuiId;
 import forestry.core.network.IStreamableGui;
-import forestry.farming.multiblock.FakeFarmController;
-import forestry.farming.multiblock.FarmController;
-import forestry.farming.multiblock.IFarmController;
+import forestry.farming.multiblock.MultiblockLogicFarm;
 import forestry.farming.render.EnumFarmBlockTexture;
 
-public abstract class TileFarm extends RectangularMultiblockTileEntityBase implements IFarmComponent, IHintSource, ISocketable, IStreamableGui, IErrorLogicSource {
+public abstract class TileFarm extends MultiblockTileEntityForestry<MultiblockLogicFarm> implements IFarmComponent, IHintSource, ISocketable, IStreamableGui, IErrorLogicSource, IRestrictedAccess {
 
 	public static final int TYPE_PLAIN = 0;
 	public static final int TYPE_REVERSE = 1;
@@ -52,32 +52,30 @@ public abstract class TileFarm extends RectangularMultiblockTileEntityBase imple
 
 	private EnumFarmBlockTexture farmBlockTexture = EnumFarmBlockTexture.BRICK_STONE;
 
-	@Override
-	public void openGui(EntityPlayer player) {
-		if (this.isConnected()) {
-			player.openGui(ForestryAPI.instance, GuiId.MultiFarmGUI.ordinal(), worldObj, xCoord, yCoord, zCoord);
-		}
+	protected TileFarm() {
+		super(new MultiblockLogicFarm());
 	}
 
 	@Override
-	public void onMachineAssembled(MultiblockControllerBase controller) {
-		super.onMachineAssembled(controller);
+	public void openGui(EntityPlayer player) {
+		player.openGui(ForestryAPI.instance, GuiId.MultiFarmGUI.ordinal(), worldObj, xCoord, yCoord, zCoord);
+	}
 
-		notifyNeighborsOfBlockChange();
+	@Override
+	public void onMachineAssembled(IMultiblockController multiblockController, ChunkCoordinates minCoord, ChunkCoordinates maxCoord) {
+		worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, getBlockType());
 		markDirty();
 	}
 
 	@Override
 	public void onMachineBroken() {
-		super.onMachineBroken();
-
-		notifyNeighborsOfBlockChange();
+		worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, getBlockType());
 		markDirty();
 	}
 
 	@Override
 	public IInventoryAdapter getInternalInventory() {
-		return getFarmController().getInternalInventory();
+		return getMultiblockLogic().getController().getInternalInventory();
 	}
 
 	@Override
@@ -126,99 +124,57 @@ public abstract class TileFarm extends RectangularMultiblockTileEntityBase imple
 		setFarmBlockTexture(farmBlockTexture);
 	}
 
-	@Override
-	public void onMachineActivated() {
-
-	}
-
-	@Override
-	public void onMachineDeactivated() {
-
-	}
-
-	@Override
-	public MultiblockControllerBase createNewMultiblock() {
-		return new FarmController(worldObj);
-	}
-
-	@Override
-	public Class<? extends MultiblockControllerBase> getMultiblockControllerType() {
-		return FarmController.class;
-	}
-
-	public IFarmController getFarmController() {
-		if (isConnected()) {
-			return (IFarmController) super.getMultiblockController();
-		} else {
-			return FakeFarmController.instance;
-		}
-	}
-
-	@Override
-	public void isGoodForExteriorLevel(int level) throws MultiblockValidationException {
-		if (level == 2 && !(this instanceof TileFarmPlain)) {
-			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.farm.error.needPlainBand"));
-		}
-	}
-
-	@Override
-	public void isGoodForInterior() throws MultiblockValidationException {
-		if (!(this instanceof TileFarmPlain)) {
-			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.farm.error.needPlainInterior"));
-		}
-	}
-
 	/* IHintSource */
 	@Override
-	public boolean hasHints() {
-		return Config.hints.get("farm").length > 0;
-	}
-
-	@Override
-	public String[] getHints() {
+	public List<String> getHints() {
 		return Config.hints.get("farm");
 	}
 
 	/* ISocketable */
 	@Override
 	public int getSocketCount() {
-		return getFarmController().getSocketCount();
+		return getMultiblockLogic().getController().getSocketCount();
 	}
 
 	@Override
 	public ItemStack getSocket(int slot) {
-		return getFarmController().getSocket(slot);
+		return getMultiblockLogic().getController().getSocket(slot);
 	}
 
 	@Override
 	public void setSocket(int slot, ItemStack stack) {
-		getFarmController().setSocket(slot, stack);
+		getMultiblockLogic().getController().setSocket(slot, stack);
 	}
 
 	@Override
 	public ICircuitSocketType getSocketType() {
-		return getFarmController().getSocketType();
+		return getMultiblockLogic().getController().getSocketType();
 	}
 
 	/* IStreamableGui */
 	@Override
-	public ChunkCoordinates getCoordinates() {
-		return getFarmController().getCoordinates();
-	}
-
-	@Override
 	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-		getFarmController().writeGuiData(data);
+		getMultiblockLogic().getController().writeGuiData(data);
 	}
 
 	@Override
 	public void readGuiData(DataInputStreamForestry data) throws IOException {
-		getFarmController().readGuiData(data);
+		getMultiblockLogic().getController().readGuiData(data);
 	}
 
 	/* IErrorLogicSource */
 	@Override
 	public IErrorLogic getErrorLogic() {
-		return getFarmController().getErrorLogic();
+		return getMultiblockLogic().getController().getErrorLogic();
+	}
+
+	@Override
+	public IAccessHandler getAccessHandler() {
+		return getMultiblockLogic().getController().getAccessHandler();
+	}
+
+	@Override
+	public void onSwitchAccess(EnumAccess oldAccess, EnumAccess newAccess) {
+		getMultiblockLogic().getController().onSwitchAccess(oldAccess, newAccess);
 	}
 }

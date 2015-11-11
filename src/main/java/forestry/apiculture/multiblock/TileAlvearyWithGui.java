@@ -10,23 +10,18 @@
  ******************************************************************************/
 package forestry.apiculture.multiblock;
 
-import java.io.IOException;
-
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
-import net.minecraft.util.ChunkCoordinates;
 
 import forestry.api.core.ForestryAPI;
 import forestry.core.access.AccessHandler;
 import forestry.core.access.EnumAccess;
 import forestry.core.access.IAccessHandler;
-import forestry.core.network.DataInputStreamForestry;
-import forestry.core.network.DataOutputStreamForestry;
+import forestry.core.access.IRestrictedAccess;
 import forestry.core.network.GuiId;
-import forestry.core.tiles.IRestrictedAccessTile;
 import forestry.core.tiles.ITitled;
 
-public abstract class TileAlvearyWithGui extends TileAlveary implements ITitled, IRestrictedAccessTile {
+public abstract class TileAlvearyWithGui extends TileAlveary implements ITitled, IRestrictedAccess {
 
 	private final AccessHandler accessHandler;
 	private final String unlocalizedTitle;
@@ -34,18 +29,13 @@ public abstract class TileAlvearyWithGui extends TileAlveary implements ITitled,
 
 	protected TileAlvearyWithGui(int meta, GuiId guiId) {
 		this.accessHandler = new AccessHandler(this);
-		this.unlocalizedTitle = "alveary." + meta + ".name";
+		this.unlocalizedTitle = "tile.for.alveary." + meta + ".name";
 		this.guiId = guiId;
 	}
 
 	@Override
 	public final IAccessHandler getAccessHandler() {
 		return accessHandler;
-	}
-
-	@Override
-	public final ChunkCoordinates getCoordinates() {
-		return new ChunkCoordinates(xCoord, yCoord, zCoord);
 	}
 
 	@Override
@@ -67,16 +57,6 @@ public abstract class TileAlvearyWithGui extends TileAlveary implements ITitled,
 	public void readFromNBT(NBTTagCompound data) {
 		super.readFromNBT(data);
 		accessHandler.readFromNBT(data);
-	}
-
-	@Override
-	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-		accessHandler.writeData(data);
-	}
-
-	@Override
-	public void readGuiData(DataInputStreamForestry data) throws IOException {
-		accessHandler.readData(data);
 	}
 
 	@Override

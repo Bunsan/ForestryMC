@@ -10,8 +10,8 @@
  ******************************************************************************/
 package forestry.core.gui;
 
-public interface IHintSource {
-	boolean hasHints();
+import java.util.List;
 
-	String[] getHints();
+public interface IHintSource {
+	List<String> getHints();
 }

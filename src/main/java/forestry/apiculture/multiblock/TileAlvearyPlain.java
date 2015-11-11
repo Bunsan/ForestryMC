@@ -13,28 +13,28 @@ package forestry.apiculture.multiblock;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.List;
 
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
+import net.minecraft.util.ChunkCoordinates;
 
 import net.minecraftforge.common.util.ForgeDirection;
 
 import cpw.mods.fml.common.Optional;
 
 import forestry.api.core.ForestryAPI;
+import forestry.api.multiblock.IMultiblockController;
 import forestry.apiculture.trigger.ApicultureTriggers;
 import forestry.core.config.Config;
 import forestry.core.gui.IHintSource;
 import forestry.core.inventory.IInventoryAdapter;
-import forestry.core.multiblock.MultiblockControllerBase;
-import forestry.core.multiblock.rectangular.PartPosition;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
 import forestry.core.network.GuiId;
 import forestry.core.network.IStreamableGui;
 import forestry.core.tiles.IClimatised;
 import forestry.core.tiles.ITitled;
-import forestry.core.utils.BlockUtil;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.ITriggerExternal;
@@ -42,16 +42,16 @@ import buildcraft.api.statements.ITriggerInternal;
 import buildcraft.api.statements.ITriggerProvider;
 
 @Optional.Interface(iface = "buildcraft.api.statements.ITriggerProvider", modid = "BuildCraftAPI|statements")
-public class TileAlvearyPlain extends TileAlveary implements IClimatised, IHintSource, IStreamableGui, ITitled, ITriggerProvider {
+public class TileAlvearyPlain extends TileAlveary implements IClimatised, IHintSource, ITitled, ITriggerProvider, IStreamableGui {
 
 	@Override
-	public void onMachineAssembled(MultiblockControllerBase controller) {
-		super.onMachineAssembled(controller);
+	public void onMachineAssembled(IMultiblockController multiblockController, ChunkCoordinates minCoord, ChunkCoordinates maxCoord) {
+		super.onMachineAssembled(multiblockController, minCoord, maxCoord);
 
 		if (!worldObj.isRemote) {
 			// set alveary entrance block meta
-			if (getPartPosition() == PartPosition.Frame) {
-				if (BlockUtil.isWoodSlabBlock(worldObj.getBlock(xCoord, yCoord + 1, zCoord))) {
+			if (yCoord == maxCoord.posY) {
+				if ((xCoord > minCoord.posX && xCoord < maxCoord.posX) || (zCoord > minCoord.posZ && zCoord < maxCoord.posZ)) {
 					this.worldObj.setBlockMetadataWithNotify(xCoord, yCoord, zCoord, TileAlveary.ENTRANCE_META, 2);
 				}
 			}
@@ -70,7 +70,7 @@ public class TileAlvearyPlain extends TileAlveary implements IClimatised, IHintS
 
 	@Override
 	public IInventoryAdapter getInternalInventory() {
-		return getAlvearyController().getInternalInventory();
+		return getMultiblockLogic().getController().getInternalInventory();
 	}
 
 	@Override
@@ -81,34 +81,28 @@ public class TileAlvearyPlain extends TileAlveary implements IClimatised, IHintS
 	/* GUI */
 	@Override
 	public void openGui(EntityPlayer player) {
-		if (isConnected()) {
-			player.openGui(ForestryAPI.instance, GuiId.AlvearyGUI.ordinal(), worldObj, xCoord, yCoord, zCoord);
-		}
+		player.openGui(ForestryAPI.instance, GuiId.AlvearyGUI.ordinal(), worldObj, xCoord, yCoord, zCoord);
 	}
 
+	/* IStreamableGui */
 	@Override
 	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-		getAlvearyController().writeGuiData(data);
+		getMultiblockLogic().getController().writeGuiData(data);
 	}
 
 	@Override
 	public void readGuiData(DataInputStreamForestry data) throws IOException {
-		getAlvearyController().readGuiData(data);
+		getMultiblockLogic().getController().readGuiData(data);
 	}
 
 	@Override
 	public String getUnlocalizedTitle() {
-		return "alveary.0.name";
+		return "tile.for.alveary.0.name";
 	}
 
 	/* IHintSource */
 	@Override
-	public boolean hasHints() {
-		return Config.hints.get("apiary").length > 0;
-	}
-
-	@Override
-	public String[] getHints() {
+	public List<String> getHints() {
 		return Config.hints.get("apiary");
 	}
 
@@ -131,11 +125,11 @@ public class TileAlvearyPlain extends TileAlveary implements IClimatised, IHintS
 	/* IClimatised */
 	@Override
 	public float getExactTemperature() {
-		return getAlvearyController().getExactTemperature();
+		return getMultiblockLogic().getController().getExactTemperature();
 	}
 
 	@Override
 	public float getExactHumidity() {
-		return getAlvearyController().getExactHumidity();
+		return getMultiblockLogic().getController().getExactHumidity();
 	}
 }

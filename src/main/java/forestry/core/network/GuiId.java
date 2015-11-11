@@ -79,6 +79,10 @@ public enum GuiId {
 	
 	MailboxGUI,
 
+	MinecartBeehouseGUI,
+
+	MinecartApiaryGUI,
+
 	MoistenerGUI,
 
 	MushroomFarmGUI,

@@ -10,19 +10,25 @@
  ******************************************************************************/
 package forestry.food;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
 import net.minecraft.item.ItemStack;
 import net.minecraft.world.World;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 import forestry.core.GuiHandlerBase;
 import forestry.core.network.GuiId;
 import forestry.food.gui.ContainerInfuser;
 import forestry.food.gui.GuiInfuser;
-import forestry.food.items.ItemInfuser.InfuserInventory;
+import forestry.food.inventory.ItemInventoryInfuser;
 
 public class GuiHandlerFood extends GuiHandlerBase {
+	@SideOnly(Side.CLIENT)
 	@Override
-	public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Gui getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -35,7 +41,7 @@ public class GuiHandlerFood extends GuiHandlerBase {
 				if (infuser == null) {
 					return null;
 				}
-				return new GuiInfuser(player.inventory, new InfuserInventory(player, infuser));
+				return new GuiInfuser(player.inventory, new ItemInventoryInfuser(player, infuser));
 
 			default:
 				return null;
@@ -43,7 +49,7 @@ public class GuiHandlerFood extends GuiHandlerBase {
 	}
 
 	@Override
-	public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Container getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -56,7 +62,7 @@ public class GuiHandlerFood extends GuiHandlerBase {
 				if (infuser == null) {
 					return null;
 				}
-				return new ContainerInfuser(player.inventory, new InfuserInventory(player, infuser));
+				return new ContainerInfuser(player.inventory, new ItemInventoryInfuser(player, infuser));
 
 			default:
 				return null;

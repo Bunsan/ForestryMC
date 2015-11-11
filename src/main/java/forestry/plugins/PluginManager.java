@@ -34,11 +34,11 @@ import net.minecraftforge.common.config.Property;
 
 import cpw.mods.fml.common.IFuelHandler;
 import cpw.mods.fml.common.event.FMLInterModComms;
-import cpw.mods.fml.common.network.IGuiHandler;
 import cpw.mods.fml.common.registry.GameRegistry;
 
 import forestry.Forestry;
 import forestry.api.core.ForestryAPI;
+import forestry.core.GuiHandlerBase;
 import forestry.core.IPickupHandler;
 import forestry.core.IResupplyHandler;
 import forestry.core.ISaveEventHandler;
@@ -49,7 +49,7 @@ public class PluginManager {
 	private static final String MODULE_CONFIG_FILE_NAME = "modules.cfg";
 	private static final String CATEGORY_MODULES = "modules";
 
-	public static final ArrayList<IGuiHandler> guiHandlers = Lists.newArrayList();
+	public static final ArrayList<GuiHandlerBase> guiHandlers = Lists.newArrayList();
 	public static final ArrayList<IPickupHandler> pickupHandlers = Lists.newArrayList();
 	public static final ArrayList<ISaveEventHandler> saveEventHandlers = Lists.newArrayList();
 	public static final ArrayList<IResupplyHandler> resupplyHandlers = Lists.newArrayList();
@@ -59,7 +59,12 @@ public class PluginManager {
 	private static Stage stage = Stage.SETUP;
 
 	public enum Stage {
-		SETUP, SETUP_DISABLED, PRE_INIT, INIT, POST_INIT, FINISHED
+		SETUP, // setup API to make it functional, register basic blocks and items. GameMode Configs are not yet accessible
+		SETUP_DISABLED, // setup fallback API to avoid crashes
+		PRE_INIT, // register handlers, triggers, definitions, backpacks, crates, and anything that depends on basic items
+		INIT, // anything that depends on PreInit stages, recipe registration
+		POST_INIT, // stubborn mod integration, dungeon loot, and finalization of things that take input from mods
+		FINISHED
 	}
 
 	public enum Module {
@@ -144,7 +149,7 @@ public class PluginManager {
 	private static void registerHandlers(ForestryPlugin plugin) {
 		Log.fine("Registering Handlers for Plugin: {0}", plugin);
 
-		IGuiHandler guiHandler = plugin.getGuiHandler();
+		GuiHandlerBase guiHandler = plugin.getGuiHandler();
 		if (guiHandler != null) {
 			guiHandlers.add(guiHandler);
 		}
@@ -240,6 +245,7 @@ public class PluginManager {
 			ForestryPlugin plugin = m.instance;
 			Log.fine("Setup Start: {0}", plugin);
 			plugin.setupAPI();
+			plugin.registerItemsAndBlocks();
 			Log.fine("Setup Complete: {0}", plugin);
 		}
 
@@ -259,7 +265,6 @@ public class PluginManager {
 			Log.fine("Pre-Init Start: {0}", plugin);
 			registerHandlers(plugin);
 			plugin.preInit();
-			plugin.registerItems();
 			if (Module.BUILDCRAFT_STATEMENTS.isEnabled()) {
 				plugin.registerTriggers();
 			}

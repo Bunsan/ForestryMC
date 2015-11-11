@@ -86,6 +86,14 @@ public class DataOutputStreamForestry extends DataOutputStream {
 		writeByte(varInt);
 	}
 
+	public <T extends Enum<T>> void writeEnum(T enumValue, T[] enumValues) throws IOException {
+		if (enumValues.length <= 256) {
+			writeByte(enumValue.ordinal());
+		} else {
+			writeVarInt(enumValue.ordinal());
+		}
+	}
+
 	public void writeNBTTagCompound(NBTTagCompound nbttagcompound) throws IOException {
 		if (nbttagcompound == null) {
 			writeVarInt(-1);

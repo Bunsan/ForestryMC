@@ -20,17 +20,19 @@ import cpw.mods.fml.common.Optional;
 
 import forestry.api.core.IErrorLogic;
 import forestry.core.circuits.ISpeedUpgradable;
+import forestry.core.config.Config;
 import forestry.core.errors.EnumErrorCode;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
+import forestry.core.network.GuiId;
+import forestry.core.network.IStreamableGui;
 import forestry.core.render.TankRenderInfo;
 import forestry.energy.EnergyManager;
 
 import buildcraft.api.tiles.IHasWork;
 
 @Optional.Interface(iface = "buildcraft.api.tiles.IHasWork", modid = "BuildCraftAPI|tiles")
-public abstract class TilePowered extends TileBase implements IRenderableTile, IPowerHandler, IHasWork, ISpeedUpgradable {
-
+public abstract class TilePowered extends TileBase implements IRenderableTile, IPowerHandler, IHasWork, ISpeedUpgradable, IStreamableGui {
 	private static final int WORK_TICK_INTERVAL = 5; // one Forestry work tick happens every WORK_TICK_INTERVAL game ticks
 
 	private final EnergyManager energyManager;
@@ -45,12 +47,14 @@ public abstract class TilePowered extends TileBase implements IRenderableTile, I
 	// the number of work ticks that this tile has had no power
 	private int noPowerTime = 0;
 
-	protected TilePowered(int maxTransfer, int capacity, int energyPerWorkCycle) {
+	protected TilePowered(GuiId guiId, String hintKey, int maxTransfer, int capacity) {
+		super(guiId, hintKey);
 		this.energyManager = new EnergyManager(maxTransfer, capacity);
 		this.energyManager.setReceiveOnly();
 
-		setEnergyPerWorkCycle(energyPerWorkCycle);
 		this.ticksPerWorkCycle = 4;
+
+		hints.addAll(Config.hints.get("powered.machine"));
 	}
 
 	public int getWorkCounter() {
@@ -99,7 +103,7 @@ public abstract class TilePowered extends TileBase implements IRenderableTile, I
 		IErrorLogic errorLogic = getErrorLogic();
 
 		boolean disabled = isRedstoneActivated();
-		errorLogic.setCondition(disabled, EnumErrorCode.DISABLED);
+		errorLogic.setCondition(disabled, EnumErrorCode.DISABLED_BY_REDSTONE);
 		if (disabled) {
 			return;
 		}
@@ -114,13 +118,13 @@ public abstract class TilePowered extends TileBase implements IRenderableTile, I
 			int energyPerWorkCycle = getEnergyPerWorkCycle();
 			boolean consumedEnergy = energyManager.consumeEnergyToDoWork(ticksPerWorkCycle, energyPerWorkCycle);
 			if (consumedEnergy) {
-				errorLogic.setCondition(false, EnumErrorCode.NOPOWER);
+				errorLogic.setCondition(false, EnumErrorCode.NO_POWER);
 				workCounter++;
 				noPowerTime = 0;
 			} else {
 				noPowerTime++;
 				if (noPowerTime > 4) {
-					errorLogic.setCondition(true, EnumErrorCode.NOPOWER);
+					errorLogic.setCondition(true, EnumErrorCode.NO_POWER);
 				}
 			}
 		}
@@ -157,7 +161,6 @@ public abstract class TilePowered extends TileBase implements IRenderableTile, I
 
 	@Override
 	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-		super.writeGuiData(data);
 		energyManager.writeData(data);
 		data.writeVarInt(workCounter);
 		data.writeVarInt(getTicksPerWorkCycle());
@@ -165,7 +168,6 @@ public abstract class TilePowered extends TileBase implements IRenderableTile, I
 
 	@Override
 	public void readGuiData(DataInputStreamForestry data) throws IOException {
-		super.readGuiData(data);
 		energyManager.readData(data);
 		workCounter = data.readVarInt();
 		ticksPerWorkCycle = data.readVarInt();

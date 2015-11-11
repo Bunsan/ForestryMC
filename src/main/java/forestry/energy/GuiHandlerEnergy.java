@@ -10,13 +10,19 @@
  ******************************************************************************/
 package forestry.energy;
 
+import net.minecraft.client.gui.Gui;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.Container;
 import net.minecraft.world.World;
+
+import cpw.mods.fml.relauncher.Side;
+import cpw.mods.fml.relauncher.SideOnly;
 
 import forestry.core.GuiHandlerBase;
 import forestry.core.network.GuiId;
 import forestry.core.network.PacketSocketUpdate;
 import forestry.core.proxy.Proxies;
+import forestry.core.tiles.TileUtil;
 import forestry.energy.gui.ContainerEngineBiogas;
 import forestry.energy.gui.ContainerEngineElectric;
 import forestry.energy.gui.ContainerEnginePeat;
@@ -32,8 +38,9 @@ import forestry.energy.tiles.TileGenerator;
 
 public class GuiHandlerEnergy extends GuiHandlerBase {
 
+	@SideOnly(Side.CLIENT)
 	@Override
-	public Object getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Gui getClientGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -42,16 +49,16 @@ public class GuiHandlerEnergy extends GuiHandlerBase {
 		switch (GuiId.values()[id]) {
 
 			case EngineBiogasGUI:
-				return new GuiEngineBiogas(player.inventory, getTile(world, x, y, z, player, TileEngineBiogas.class));
+				return new GuiEngineBiogas(player.inventory, TileUtil.getTile(world, x, y, z, TileEngineBiogas.class));
 
 			case EnginePeatGUI:
-				return new GuiEnginePeat(player.inventory, getTile(world, x, y, z, player, TileEnginePeat.class));
+				return new GuiEnginePeat(player.inventory, TileUtil.getTile(world, x, y, z, TileEnginePeat.class));
 
 			case EngineElectricGUI:
-				return new GuiEngineElectric(player.inventory, getTile(world, x, y, z, player, TileEngineElectric.class));
+				return new GuiEngineElectric(player.inventory, TileUtil.getTile(world, x, y, z, TileEngineElectric.class));
 
 			case GeneratorGUI:
-				return new GuiGenerator(player.inventory, getTile(world, x, y, z, player, TileGenerator.class));
+				return new GuiGenerator(player.inventory, TileUtil.getTile(world, x, y, z, TileGenerator.class));
 
 			default:
 				return null;
@@ -59,7 +66,7 @@ public class GuiHandlerEnergy extends GuiHandlerBase {
 	}
 
 	@Override
-	public Object getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
+	public Container getServerGuiElement(int id, EntityPlayer player, World world, int x, int y, int z) {
 
 		if (id >= GuiId.values().length) {
 			return null;
@@ -68,18 +75,18 @@ public class GuiHandlerEnergy extends GuiHandlerBase {
 		switch (GuiId.values()[id]) {
 
 			case EngineBiogasGUI:
-				return new ContainerEngineBiogas(player.inventory, getTile(world, x, y, z, player, TileEngineBiogas.class));
+				return new ContainerEngineBiogas(player.inventory, TileUtil.getTile(world, x, y, z, TileEngineBiogas.class));
 
 			case EnginePeatGUI:
-				return new ContainerEnginePeat(player.inventory, getTile(world, x, y, z, player, TileEnginePeat.class));
+				return new ContainerEnginePeat(player.inventory, TileUtil.getTile(world, x, y, z, TileEnginePeat.class));
 
 			case EngineElectricGUI:
-				TileEngineElectric tile = getTile(world, x, y, z, player, TileEngineElectric.class);
+				TileEngineElectric tile = TileUtil.getTile(world, x, y, z, TileEngineElectric.class);
 				Proxies.net.sendToPlayer(new PacketSocketUpdate(tile), player);
 				return new ContainerEngineElectric(player.inventory, tile);
 
 			case GeneratorGUI:
-				return new ContainerGenerator(player.inventory, getTile(world, x, y, z, player, TileGenerator.class));
+				return new ContainerGenerator(player.inventory, TileUtil.getTile(world, x, y, z, TileGenerator.class));
 
 			default:
 				return null;
