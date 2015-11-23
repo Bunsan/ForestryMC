@@ -12,6 +12,7 @@ package forestry.apiculture.items;
 
 import net.minecraft.client.renderer.texture.IIconRegister;
 import net.minecraft.entity.Entity;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemArmor;
 import net.minecraft.item.ItemStack;
@@ -24,9 +25,9 @@ import forestry.api.apiculture.IArmorApiarist;
 import forestry.api.core.IArmorNaturalist;
 import forestry.api.core.Tabs;
 import forestry.core.config.Constants;
-import forestry.core.config.ForestryItem;
 import forestry.core.render.TextureManager;
 import forestry.core.utils.StringUtil;
+import forestry.plugins.PluginApiculture;
 
 public class ItemArmorApiarist extends ItemArmor implements IArmorApiarist, IArmorNaturalist {
 
@@ -38,7 +39,7 @@ public class ItemArmorApiarist extends ItemArmor implements IArmorApiarist, IArm
 
 	@Override
 	public String getArmorTexture(ItemStack stack, Entity entity, int slot, String type) {
-		if (ForestryItem.apiaristLegs.isItemEqual(stack)) {
+		if (stack != null && stack.getItem() == PluginApiculture.items.apiaristLegs) {
 			return Constants.ID + ":" + Constants.TEXTURE_APIARIST_ARMOR_SECONDARY;
 		} else {
 			return Constants.ID + ":" + Constants.TEXTURE_APIARIST_ARMOR_PRIMARY;
@@ -70,6 +71,11 @@ public class ItemArmorApiarist extends ItemArmor implements IArmorApiarist, IArm
 	@Override
 	public boolean hasColor(ItemStack itemstack) {
 		return false;
+	}
+
+	@Override
+	public boolean protectEntity(EntityLivingBase entity, ItemStack armor, String cause, boolean doProtect) {
+		return true;
 	}
 
 	@Override

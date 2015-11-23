@@ -17,9 +17,6 @@ import forestry.core.utils.SlotUtil;
 import forestry.factory.tiles.TileWorktable;
 
 public class InventoryWorktable extends InventoryAdapterTile<TileWorktable> {
-	public final static int SLOT_CRAFTING_1 = 0;
-	public final static int SLOT_CRAFTING_COUNT = 9;
-	public final static int SLOT_CRAFTING_RESULT = 9;
 	public final static short SLOT_INVENTORY_1 = 0;
 	public final static short SLOT_INVENTORY_COUNT = 18;
 

@@ -12,18 +12,15 @@ package forestry.farming.logic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 import java.util.Stack;
 
 import net.minecraft.block.Block;
-import net.minecraft.entity.Entity;
-import net.minecraft.entity.item.EntityItem;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.ItemStack;
-import net.minecraft.util.AxisAlignedBB;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.world.World;
@@ -37,10 +34,10 @@ import forestry.api.farming.ICrop;
 import forestry.api.farming.IFarmHousing;
 import forestry.api.farming.IFarmable;
 import forestry.core.blocks.BlockSoil;
-import forestry.core.config.ForestryBlock;
 import forestry.core.render.SpriteSheet;
 import forestry.core.utils.vect.Vect;
 import forestry.core.utils.vect.VectUtil;
+import forestry.plugins.PluginCore;
 
 public class FarmLogicArboreal extends FarmLogicHomogeneous {
 
@@ -49,7 +46,7 @@ public class FarmLogicArboreal extends FarmLogicHomogeneous {
 	}
 
 	public FarmLogicArboreal(IFarmHousing housing) {
-		super(housing, new ItemStack(Blocks.dirt), ForestryBlock.soil.getItemStack(1, 0), Farmables.farmables.get("farmArboreal"));
+		super(housing, new ItemStack(Blocks.dirt), PluginCore.blocks.soil.get(BlockSoil.SoilType.HUMUS, 1), Farmables.farmables.get("farmArboreal"));
 	}
 
 	@Override
@@ -59,7 +56,7 @@ public class FarmLogicArboreal extends FarmLogicHomogeneous {
 		}
 
 		Block block = BlockSoil.getBlockFromItem(soil.getItem());
-		if (block == null || !(block instanceof BlockSoil)) {
+		if (!(block instanceof BlockSoil)) {
 			return false;
 		}
 		BlockSoil blockSoil = (BlockSoil) block;
@@ -92,36 +89,10 @@ public class FarmLogicArboreal extends FarmLogicHomogeneous {
 		return (int) (10 * hydrationModifier);
 	}
 
-	@SuppressWarnings("unchecked")
 	@Override
 	public Collection<ItemStack> collect() {
-
 		Collection<ItemStack> products = produce;
-		produce = new ArrayList<>();
-
-		Vect coords = new Vect(housing.getCoords());
-		Vect area = new Vect(housing.getArea());
-		Vect offset = new Vect(housing.getOffset());
-
-		Vect min = coords.add(offset);
-		Vect max = min.add(area);
-
-		AxisAlignedBB harvestBox = AxisAlignedBB.getBoundingBox(min.x, min.y, min.z, max.x, getWorld().getHeight(), max.z);
-		List<Entity> list = getWorld().getEntitiesWithinAABB(Entity.class, harvestBox);
-
-		for (Entity entity : list) {
-			if (entity instanceof EntityItem) {
-				EntityItem item = (EntityItem) entity;
-				if (!item.isDead) {
-					ItemStack contained = item.getEntityItem();
-					if (isAcceptedGermling(contained) || isWindfall(contained)) {
-						produce.add(contained.copy());
-						item.setDead();
-					}
-				}
-			}
-		}
-
+		produce = collectEntityItems(true);
 		return products;
 	}
 
@@ -246,8 +217,8 @@ public class FarmLogicArboreal extends FarmLogicHomogeneous {
 	}
 
 	private boolean plantSapling(Vect position) {
-
 		World world = getWorld();
+		Collections.shuffle(germlings);
 		for (IFarmable candidate : germlings) {
 			if (housing.plantGermling(candidate, world, position.x, position.y, position.z)) {
 				return true;

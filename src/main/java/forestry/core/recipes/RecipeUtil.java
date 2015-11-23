@@ -14,7 +14,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import net.minecraft.inventory.Container;
 import net.minecraft.inventory.IInventory;
 import net.minecraft.inventory.InventoryCrafting;
 import net.minecraft.item.Item;
@@ -32,16 +31,12 @@ import cpw.mods.fml.common.registry.GameRegistry;
 
 import forestry.api.recipes.IDescriptiveRecipe;
 import forestry.api.recipes.RecipeManagers;
-import forestry.core.config.ForestryBlock;
-import forestry.core.config.ForestryItem;
 import forestry.core.fluids.Fluids;
-import forestry.core.gui.ContainerDummy;
 import forestry.core.utils.ItemStackUtil;
 import forestry.core.utils.Log;
+import forestry.factory.inventory.InventoryCraftingForestry;
 
 public abstract class RecipeUtil {
-
-	private static final Container DUMMY_CONTAINER = new ContainerDummy();
 
 	public static void addFermenterRecipes(ItemStack resource, int fermentationValue, Fluids output) {
 		if (RecipeManagers.fermenterManager == null) {
@@ -100,10 +95,10 @@ public abstract class RecipeUtil {
 		return result;
 	}
 
-	public static boolean canCraftRecipe(World world, ItemStack[] recipeItems, ItemStack recipeOutput, ItemStack[] availableItems) {
+	public static InventoryCraftingForestry getCraftRecipe(ItemStack[] recipeItems, ItemStack[] availableItems, World world, ItemStack recipeOutput) {
 		// Need at least one matched set
 		if (ItemStackUtil.containsSets(recipeItems, availableItems, true, true) == 0) {
-			return false;
+			return null;
 		}
 
 		// Check that it doesn't make a different recipe.
@@ -115,7 +110,7 @@ public abstract class RecipeUtil {
 		// Create a fake crafting inventory using items we have in availableItems
 		// in place of the ones in the saved crafting inventory.
 		// Check that the recipe it makes is the same as the currentRecipe.
-		InventoryCrafting crafting = new InventoryCrafting(DUMMY_CONTAINER, 3, 3);
+		InventoryCraftingForestry crafting = new InventoryCraftingForestry();
 		ItemStack[] stockCopy = ItemStackUtil.condenseStacks(availableItems);
 
 		for (int slot = 0; slot < recipeItems.length; slot++) {
@@ -146,9 +141,12 @@ public abstract class RecipeUtil {
 				}
 			}
 		}
-		ItemStack output = CraftingManager.getInstance().findMatchingRecipe(crafting, world);
 
-		return ItemStack.areItemStacksEqual(output, recipeOutput);
+		List<ItemStack> outputs = findMatchingRecipes(crafting, world);
+		if (!ItemStackUtil.containsItemStack(outputs, recipeOutput)) {
+			return null;
+		}
+		return crafting;
 	}
 
 	public static List<ItemStack> findMatchingRecipes(InventoryCrafting inventory, World world) {
@@ -164,7 +162,9 @@ public abstract class RecipeUtil {
 
 			if (irecipe.matches(inventory, world)) {
 				ItemStack result = irecipe.getCraftingResult(inventory);
-				matchingRecipes.add(result);
+				if (!ItemStackUtil.containsItemStack(matchingRecipes, result)) {
+					matchingRecipes.add(result);
+				}
 			}
 		}
 
@@ -209,26 +209,31 @@ public abstract class RecipeUtil {
 		return null;
 	}
 
-	private static void cleanRecipe(Object... obj) {
-		for (int i = 0; i < obj.length; i++) {
-			if (obj[i] instanceof ForestryItem) {
-				obj[i] = ((ForestryItem) obj[i]).item();
-			} else if (obj[i] instanceof ForestryBlock) {
-				obj[i] = ((ForestryBlock) obj[i]).block();
-			}
-		}
+	public static void addRecipe(Item item, Object... obj) {
+		addRecipe(new ItemStack(item), obj);
 	}
 
 	@SuppressWarnings("unchecked")
 	public static void addRecipe(ItemStack itemstack, Object... obj) {
-		cleanRecipe(obj);
 		CraftingManager.getInstance().getRecipeList().add(new ShapedOreRecipe(itemstack, obj));
 	}
 
 	@SuppressWarnings("unchecked")
+	public static void addPriorityRecipe(ItemStack itemStack, Object... obj) {
+		CraftingManager.getInstance().getRecipeList().add(0, new ShapedOreRecipe(itemStack, obj));
+	}
+
+	public static void addShapelessRecipe(Item item, Object... obj) {
+		addShapelessRecipe(new ItemStack(item), obj);
+	}
+
+	@SuppressWarnings("unchecked")
 	public static void addShapelessRecipe(ItemStack itemstack, Object... obj) {
-		cleanRecipe(obj);
 		CraftingManager.getInstance().getRecipeList().add(new ShapelessOreRecipe(itemstack, obj));
+	}
+
+	public static void addSmelting(ItemStack res, Item prod, float xp) {
+		addSmelting(res, new ItemStack(prod), xp);
 	}
 
 	public static void addSmelting(ItemStack res, ItemStack prod, float xp) {

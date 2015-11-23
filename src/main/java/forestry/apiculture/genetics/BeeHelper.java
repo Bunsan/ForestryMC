@@ -41,13 +41,13 @@ import forestry.api.apiculture.IBeekeepingLogic;
 import forestry.api.apiculture.IBeekeepingMode;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
+import forestry.api.genetics.IChromosome;
 import forestry.api.genetics.IChromosomeType;
 import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.IMutation;
 import forestry.apiculture.BeeHousingListener;
 import forestry.apiculture.BeeHousingModifier;
 import forestry.apiculture.BeekeepingLogic;
-import forestry.core.config.ForestryItem;
 import forestry.core.genetics.SpeciesRoot;
 import forestry.plugins.PluginApiculture;
 
@@ -107,20 +107,20 @@ public class BeeHelper extends SpeciesRoot implements IBeeRoot {
 		Item beeItem;
 		switch (EnumBeeType.VALUES[type]) {
 			case QUEEN:
-				beeItem = ForestryItem.beeQueenGE.item();
+				beeItem = PluginApiculture.items.beeQueenGE;
 				// ensure a queen is always mated
 				if (bee.getMate() == null) {
 					bee.mate(bee);
 				}
 				break;
 			case PRINCESS:
-				beeItem = ForestryItem.beePrincessGE.item();
+				beeItem = PluginApiculture.items.beePrincessGE;
 				break;
 			case DRONE:
-				beeItem = ForestryItem.beeDroneGE.item();
+				beeItem = PluginApiculture.items.beeDroneGE;
 				break;
 			case LARVAE:
-				beeItem = ForestryItem.beeLarvaeGE.item();
+				beeItem = PluginApiculture.items.beeLarvaeGE;
 				break;
 			default:
 				throw new RuntimeException("Cannot instantiate a bee of type " + type);
@@ -139,13 +139,15 @@ public class BeeHelper extends SpeciesRoot implements IBeeRoot {
 			return EnumBeeType.NONE;
 		}
 
-		if (ForestryItem.beeDroneGE.isItemEqual(stack)) {
+		Item item = stack.getItem();
+
+		if (PluginApiculture.items.beeDroneGE == item) {
 			return EnumBeeType.DRONE;
-		} else if (ForestryItem.beePrincessGE.isItemEqual(stack)) {
+		} else if (PluginApiculture.items.beePrincessGE == item) {
 			return EnumBeeType.PRINCESS;
-		} else if (ForestryItem.beeQueenGE.isItemEqual(stack)) {
+		} else if (PluginApiculture.items.beeQueenGE == item) {
 			return EnumBeeType.QUEEN;
-		} else if (ForestryItem.beeLarvaeGE.isItemEqual(stack)) {
+		} else if (PluginApiculture.items.beeLarvaeGE == item) {
 			return EnumBeeType.LARVAE;
 		}
 
@@ -194,7 +196,8 @@ public class BeeHelper extends SpeciesRoot implements IBeeRoot {
 	/* GENOME CONVERSIONS */
 	@Override
 	public IBeeGenome templateAsGenome(IAllele[] template) {
-		return new BeeGenome(templateAsChromosomes(template));
+		IChromosome[] chromosomes = templateAsChromosomes(template);
+		return new BeeGenome(chromosomes);
 	}
 
 	@Override
@@ -222,7 +225,9 @@ public class BeeHelper extends SpeciesRoot implements IBeeRoot {
 
 	@Override
 	public void registerTemplate(String identifier, IAllele[] template) {
-		beeTemplates.add(new Bee(BeeManager.beeRoot.templateAsGenome(template)));
+		IBeeGenome beeGenome = BeeManager.beeRoot.templateAsGenome(template);
+		IBee bee = new Bee(beeGenome);
+		beeTemplates.add(bee);
 		speciesTemplates.put(identifier, template);
 	}
 

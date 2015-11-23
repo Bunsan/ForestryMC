@@ -75,8 +75,8 @@ import forestry.farming.FarmHelper;
 import forestry.farming.FarmTarget;
 import forestry.farming.gui.IFarmLedgerDelegate;
 import forestry.farming.logic.FarmLogicArboreal;
+import forestry.farming.tiles.TileFarmGearbox;
 import forestry.farming.tiles.TileFarmPlain;
-import forestry.farming.tiles.TileGearbox;
 
 public class FarmController extends RectangularMultiblockControllerBase implements IFarmControllerInternal, ILiquidTankTile {
 
@@ -130,6 +130,9 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	// the number of work ticks that this farm has had no power
 	private int noPowerTime = 0;
+
+	// tick updates can come from multiple gearboxes so keep track of them here
+	private int farmWorkTicks = 0;
 
 	private BiomeGenBase cachedBiome;
 
@@ -209,7 +212,7 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 		boolean hasGearbox = false;
 		for (IMultiblockComponent part : connectedParts) {
-			if (part instanceof TileGearbox) {
+			if (part instanceof TileFarmGearbox) {
 				hasGearbox = true;
 				break;
 			}
@@ -261,8 +264,8 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 		boolean hasPower = false;
 		for (Map.Entry<IFarmComponent.Active, Integer> entry : farmActiveComponents.entrySet()) {
 			IFarmComponent.Active farmComponent = entry.getKey();
-			if (farmComponent instanceof TileGearbox) {
-				hasPower |= ((TileGearbox) farmComponent).getEnergyManager().getTotalEnergyStored() > 0;
+			if (farmComponent instanceof TileFarmGearbox) {
+				hasPower |= ((TileFarmGearbox) farmComponent).getEnergyManager().getTotalEnergyStored() > 0;
 			}
 
 			int tickOffset = entry.getValue();
@@ -440,7 +443,8 @@ public class FarmController extends RectangularMultiblockControllerBase implemen
 
 	@Override
 	public boolean doWork() {
-		if (targets.isEmpty() || updateOnInterval(400)) {
+		farmWorkTicks++;
+		if (targets.isEmpty() || farmWorkTicks % 20 == 0) {
 			setUpFarmlandTargets();
 		}
 

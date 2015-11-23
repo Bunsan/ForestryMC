@@ -21,15 +21,15 @@ import com.mojang.authlib.GameProfile;
 
 import forestry.api.multiblock.IMultiblockLogic;
 import forestry.api.multiblock.MultiblockTileEntityBase;
-import forestry.core.access.IOwnable;
 import forestry.core.config.Constants;
+import forestry.core.gui.GuiHandler;
+import forestry.core.gui.IGuiHandlerTile;
 import forestry.core.inventory.FakeInventoryAdapter;
 import forestry.core.inventory.IInventoryAdapter;
 import forestry.core.tiles.IFilterSlotDelegate;
 import forestry.core.tiles.ILocatable;
-import forestry.core.utils.PlayerUtil;
 
-public abstract class MultiblockTileEntityForestry<T extends IMultiblockLogic> extends MultiblockTileEntityBase<T> implements ISidedInventory, IFilterSlotDelegate, IOwnable, ILocatable {
+public abstract class MultiblockTileEntityForestry<T extends IMultiblockLogic> extends MultiblockTileEntityBase<T> implements ISidedInventory, IFilterSlotDelegate, ILocatable, IGuiHandlerTile {
 	private GameProfile owner;
 
 	public MultiblockTileEntityForestry(T multiblockLogic) {
@@ -40,7 +40,7 @@ public abstract class MultiblockTileEntityForestry<T extends IMultiblockLogic> e
 	 * Called by a structure block when it is right clicked by a player.
 	 */
 	public void openGui(EntityPlayer player) {
-
+		GuiHandler.openGui(player, this);
 	}
 
 	@Override
@@ -65,27 +65,6 @@ public abstract class MultiblockTileEntityForestry<T extends IMultiblockLogic> e
 		}
 
 		getInternalInventory().writeToNBT(data);
-	}
-
-	/* IOwnable */
-	@Override
-	public boolean isOwned() {
-		return owner != null;
-	}
-
-	@Override
-	public GameProfile getOwner() {
-		return owner;
-	}
-
-	@Override
-	public void setOwner(GameProfile owner) {
-		this.owner = owner;
-	}
-
-	@Override
-	public boolean isOwner(EntityPlayer player) {
-		return PlayerUtil.isSameGameProfile(owner, player.getGameProfile());
 	}
 
 	/* INVENTORY */
@@ -198,5 +177,15 @@ public abstract class MultiblockTileEntityForestry<T extends IMultiblockLogic> e
 	@Override
 	public final World getWorld() {
 		return worldObj;
+	}
+
+	/* IMultiblockComponent */
+	@Override
+	public final GameProfile getOwner() {
+		return owner;
+	}
+
+	public final void setOwner(GameProfile owner) {
+		this.owner = owner;
 	}
 }

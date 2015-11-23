@@ -15,20 +15,19 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.InventoryPlayer;
 import net.minecraft.item.ItemStack;
 
 import forestry.api.apiculture.IAlleleBeeSpecies;
 import forestry.apiculture.genetics.BeeGenome;
 import forestry.apiculture.inventory.ItemInventoryImprinter;
-import forestry.apiculture.items.ItemBeeGE;
 import forestry.core.config.Constants;
-import forestry.core.config.ForestryItem;
 import forestry.core.gui.GuiForestry;
-import forestry.core.network.PacketGuiSelectRequest;
+import forestry.core.gui.GuiUtil;
+import forestry.core.network.packets.PacketGuiSelectRequest;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.StringUtil;
+import forestry.plugins.PluginApiculture;
 
 public class GuiImprinter extends GuiForestry<ContainerImprinter, ItemInventoryImprinter> {
 
@@ -44,7 +43,7 @@ public class GuiImprinter extends GuiForestry<ContainerImprinter, ItemInventoryI
 		ySize = 185;
 
 		List<ItemStack> beeList = new ArrayList<>();
-		((ItemBeeGE) ForestryItem.beeDroneGE.item()).addCreativeItems(beeList, false);
+		PluginApiculture.items.beeDroneGE.addCreativeItems(beeList, false);
 		for (ItemStack beeStack : beeList) {
 			IAlleleBeeSpecies species = BeeGenome.getSpecies(beeStack);
 			if (species != null) {
@@ -75,9 +74,7 @@ public class GuiImprinter extends GuiForestry<ContainerImprinter, ItemInventoryI
 	}
 
 	private void drawBeeSpeciesIcon(IAlleleBeeSpecies bee, int x, int y) {
-		RenderHelper.enableStandardItemLighting();
-		drawItemStack(iconStacks.get(bee.getUID()), x, y);
-		RenderHelper.disableStandardItemLighting();
+		GuiUtil.drawItemStack(this, iconStacks.get(bee.getUID()), x, y);
 	}
 
 	private static int getHabitatSlotAtPosition(int i, int j) {

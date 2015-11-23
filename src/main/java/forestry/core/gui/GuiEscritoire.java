@@ -10,7 +10,6 @@
  ******************************************************************************/
 package forestry.core.gui;
 
-import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Items;
 import net.minecraft.item.ItemStack;
@@ -25,6 +24,7 @@ import forestry.core.gui.widgets.Widget;
 import forestry.core.tiles.EscritoireGame;
 import forestry.core.tiles.EscritoireTextSource;
 import forestry.core.tiles.TileEscritoire;
+import forestry.core.utils.StringUtil;
 
 public class GuiEscritoire extends GuiForestry<ContainerEscritoire, TileEscritoire> {
 	private final ItemStack LEVEL_ITEM = new ItemStack(Items.paper);
@@ -82,27 +82,24 @@ public class GuiEscritoire extends GuiForestry<ContainerEscritoire, TileEscritoi
 		super.drawGuiContainerBackgroundLayer(var1, mouseX, mouseY);
 
 		for (int i = 0; i <= inventory.getGame().getBountyLevel() / 4; i++) {
-			RenderHelper.enableGUIStandardItemLighting();
-			GuiForestry.itemRender.renderItemAndEffectIntoGUI(mc.fontRenderer, mc.renderEngine, LEVEL_ITEM, guiLeft + 170 + i * 8, guiTop + 7);
-			RenderHelper.disableStandardItemLighting();
+			GuiUtil.drawItemStack(this, LEVEL_ITEM, guiLeft + 170 + i * 8, guiTop + 7);
 		}
 
-		startPage();
-		GL11.glPushMatrix();
+		textLayout.startPage();
 		{
 			GL11.glScaled(0.5, 0.5, 0.5);
 			GL11.glTranslated(guiLeft + 170, guiTop + 10, 0.0);
 
-			newLine();
-			newLine();
+			textLayout.newLine();
+			textLayout.newLine();
 			String format = EnumChatFormatting.UNDERLINE + EnumChatFormatting.ITALIC.toString();
 			int attemptNo = EscritoireGame.BOUNTY_MAX - inventory.getGame().getBountyLevel();
-			drawLine(format + "Attempt No. " + attemptNo, 170, fontColor.get("gui.mail.lettertext"));
-			newLine();
+			String attemptNoString = StringUtil.localizeAndFormat("gui.escritoire.attempt.number", attemptNo);
+			textLayout.drawLine(format + attemptNoString, 170, fontColor.get("gui.mail.lettertext"));
+			textLayout.newLine();
 			String escritoireText = textSource.getText(inventory.getGame());
-			drawSplitLine(escritoireText, 170, 90, fontColor.get("gui.mail.lettertext"));
+			textLayout.drawSplitLine(escritoireText, 170, 90, fontColor.get("gui.mail.lettertext"));
 		}
-		GL11.glPopMatrix();
-		endPage();
+		textLayout.endPage();
 	}
 }
