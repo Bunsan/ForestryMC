@@ -17,6 +17,7 @@ import net.minecraft.item.Item;
 
 import net.minecraftforge.common.MinecraftForge;
 
+import cpw.mods.fml.common.FMLCommonHandler;
 import cpw.mods.fml.common.Mod;
 import cpw.mods.fml.common.Mod.EventHandler;
 import cpw.mods.fml.common.event.FMLInitializationEvent;
@@ -58,7 +59,7 @@ import forestry.plugins.PluginManager;
 		name = "Forestry",
 		version = Version.VERSION,
 		guiFactory = "forestry.core.config.ForestryGuiConfigFactory",
-		dependencies = "required-after:Forge@[10.13.4.1448,);"
+		dependencies = "required-after:Forge@[10.13.4.1566,);"
 				+ "after:Buildcraft|Core@[6.1.7,);"
 				+ "after:ExtrabiomesXL;"
 				+ "after:BiomesOPlenty;"
@@ -85,7 +86,9 @@ public class Forestry {
 		packetHandler = new PacketHandler();
 
 		// Register event handler
-		MinecraftForge.EVENT_BUS.register(new EventHandlerCore());
+		EventHandlerCore eventHandlerCore = new EventHandlerCore();
+		MinecraftForge.EVENT_BUS.register(eventHandlerCore);
+		FMLCommonHandler.instance().bus().register(eventHandlerCore);
 		MinecraftForge.EVENT_BUS.register(new MultiblockEventHandler());
 
 		configFolder = new File(event.getModConfigurationDirectory(), "forestry");
