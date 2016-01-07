@@ -12,6 +12,7 @@ package forestry.energy.tiles;
 
 import java.io.IOException;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.ISidedInventory;
@@ -33,13 +34,14 @@ import forestry.core.fluids.TankManager;
 import forestry.core.fluids.tanks.FilteredTank;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.render.TankRenderInfo;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.tiles.IRenderableTile;
 import forestry.core.tiles.TileBase;
+import forestry.energy.gui.ContainerGenerator;
+import forestry.energy.gui.GuiGenerator;
 import forestry.energy.inventory.InventoryGenerator;
-import forestry.plugins.PluginIC2;
+import forestry.plugins.compat.PluginIC2;
 
 import ic2.api.energy.prefab.BasicSource;
 
@@ -54,7 +56,7 @@ public class TileGenerator extends TileBase implements ISidedInventory, ILiquidT
 	private BasicSource ic2EnergySource;
 
 	public TileGenerator() {
-		super(GuiId.GeneratorGUI, "generator");
+		super("generator");
 
 		setInternalInventory(new InventoryGenerator(this));
 
@@ -127,7 +129,7 @@ public class TileGenerator extends TileBase implements ISidedInventory, ILiquidT
 		IErrorLogic errorLogic = getErrorLogic();
 
 		// No work to be done if IC2 is unavailable.
-		if (errorLogic.setCondition(ic2EnergySource == null, EnumErrorCode.NOENERGYNET)) {
+		if (errorLogic.setCondition(ic2EnergySource == null, EnumErrorCode.NO_ENERGY_NET)) {
 			return;
 		}
 
@@ -148,7 +150,7 @@ public class TileGenerator extends TileBase implements ISidedInventory, ILiquidT
 		}
 
 		boolean hasFuel = resourceTank.getFluidAmount() > 0;
-		errorLogic.setCondition(!hasFuel, EnumErrorCode.NOFUEL);
+		errorLogic.setCondition(!hasFuel, EnumErrorCode.NO_FUEL);
 	}
 
 	public boolean isWorking() {
@@ -226,5 +228,15 @@ public class TileGenerator extends TileBase implements ISidedInventory, ILiquidT
 	@Override
 	public FluidTankInfo[] getTankInfo(ForgeDirection from) {
 		return tankManager.getTankInfo(from);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiGenerator(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerGenerator(player.inventory, this);
 	}
 }

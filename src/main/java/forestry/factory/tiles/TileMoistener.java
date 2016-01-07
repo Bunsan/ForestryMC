@@ -13,6 +13,7 @@ package forestry.factory.tiles;
 import java.io.IOException;
 import java.util.ArrayList;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.ISidedInventory;
@@ -38,13 +39,14 @@ import forestry.core.fluids.tanks.FilteredTank;
 import forestry.core.inventory.IInventoryAdapter;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.render.TankRenderInfo;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.tiles.IRenderableTile;
 import forestry.core.tiles.TileBase;
 import forestry.core.utils.InventoryUtil;
 import forestry.core.utils.ItemStackUtil;
+import forestry.factory.gui.ContainerMoistener;
+import forestry.factory.gui.GuiMoistener;
 import forestry.factory.inventory.InventoryMoistener;
 import forestry.factory.recipes.MoistenerRecipeManager;
 
@@ -61,7 +63,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 	private ItemStack pendingProduct;
 
 	public TileMoistener() {
-		super(GuiId.MoistenerGUI, "moistener");
+		super("moistener");
 		setInternalInventory(new InventoryMoistener(this));
 		resourceTank = new FilteredTank(Constants.PROCESSOR_TANK_CAPACITY, FluidRegistry.WATER);
 		tankManager = new TankManager(this, resourceTank);
@@ -141,7 +143,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 
 		// Not working in broad daylight
 		boolean gloomy = lightvalue <= 11;
-		if (errorLogic.setCondition(!gloomy, EnumErrorCode.NOTGLOOMY)) {
+		if (errorLogic.setCondition(!gloomy, EnumErrorCode.NOT_DARK)) {
 			return;
 		}
 
@@ -161,7 +163,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 		if (burnTime > 0 && pendingProduct == null) {
 			// Not working if there is no water available.
 			boolean hasLiquid = resourceTank.getFluidAmount() > 0;
-			if (errorLogic.setCondition(!hasLiquid, EnumErrorCode.NORESOURCE)) {
+			if (errorLogic.setCondition(!hasLiquid, EnumErrorCode.NO_RESOURCE_LIQUID)) {
 				return;
 			}
 
@@ -204,7 +206,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 			}
 		}
 
-		errorLogic.setCondition(currentRecipe == null, EnumErrorCode.NORECIPE);
+		errorLogic.setCondition(currentRecipe == null, EnumErrorCode.NO_RECIPE);
 	}
 
 	private boolean tryAddPending() {
@@ -213,7 +215,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 		}
 
 		boolean added = InventoryUtil.tryAddStack(this, pendingProduct, InventoryMoistener.SLOT_PRODUCT, 1, true);
-		getErrorLogic().setCondition(!added, EnumErrorCode.NOSPACE);
+		getErrorLogic().setCondition(!added, EnumErrorCode.NO_SPACE_INVENTORY);
 
 		if (added) {
 			pendingProduct = null;
@@ -229,7 +231,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 			resetRecipe();
 		}
 
-		getErrorLogic().setCondition(currentRecipe == null, EnumErrorCode.NORECIPE);
+		getErrorLogic().setCondition(currentRecipe == null, EnumErrorCode.NO_RECIPE);
 	}
 
 	private void resetRecipe() {
@@ -323,7 +325,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 
 			int targetSlot = getFreeReservoirSlot(deposit);
 			// We stop the whole thing, if we don't have any room anymore.
-			if (errorLogic.setCondition(targetSlot < 0, EnumErrorCode.NOSPACE)) {
+			if (errorLogic.setCondition(targetSlot < 0, EnumErrorCode.NO_SPACE_INVENTORY)) {
 				return false;
 			}
 
@@ -343,7 +345,7 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 		// Let's look for a new resource to put into the working slot.
 		int resourceSlot = getNextResourceSlot(InventoryMoistener.SLOT_RESERVOIR_1, InventoryMoistener.SLOT_RESERVOIR_1 + InventoryMoistener.SLOT_RESERVOIR_COUNT);
 		// Nothing found, stop.
-		if (errorLogic.setCondition(resourceSlot < 0, EnumErrorCode.NORESOURCE)) {
+		if (errorLogic.setCondition(resourceSlot < 0, EnumErrorCode.NO_RESOURCE)) {
 			return false;
 		}
 
@@ -534,5 +536,15 @@ public class TileMoistener extends TileBase implements ISidedInventory, ILiquidT
 		iCrafting.sendProgressBarUpdate(container, 1, totalTime);
 		iCrafting.sendProgressBarUpdate(container, 2, productionTime);
 		iCrafting.sendProgressBarUpdate(container, 3, timePerItem);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiMoistener(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerMoistener(player.inventory, this);
 	}
 }

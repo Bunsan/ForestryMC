@@ -17,7 +17,7 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import forestry.core.triggers.Trigger;
 import forestry.core.utils.InventoryUtil;
-import forestry.farming.tiles.TileHatch;
+import forestry.farming.tiles.TileFarmHatch;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -41,12 +41,12 @@ public class TriggerLowGermlings extends Trigger {
 	 */
 	@Override
 	public boolean isTriggerActive(TileEntity tile, ForgeDirection side, IStatementContainer source, IStatementParameter[] parameters) {
-		if (!(tile instanceof TileHatch)) {
+		if (!(tile instanceof TileFarmHatch)) {
 			return false;
 		}
 
-		TileHatch tileHatch = (TileHatch) tile;
-		IInventory germlingsInventory = tileHatch.getFarmController().getFarmInventory().getGermlingsInventory();
+		TileFarmHatch tileHatch = (TileFarmHatch) tile;
+		IInventory germlingsInventory = tileHatch.getMultiblockLogic().getController().getFarmInventory().getGermlingsInventory();
 		return InventoryUtil.containsPercent(germlingsInventory, threshold);
 	}
 }

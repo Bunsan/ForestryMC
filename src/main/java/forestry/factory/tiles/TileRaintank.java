@@ -12,6 +12,7 @@ package forestry.factory.tiles;
 
 import java.io.IOException;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.Container;
 import net.minecraft.inventory.ICrafting;
 import net.minecraft.inventory.ISidedInventory;
@@ -36,10 +37,11 @@ import forestry.core.fluids.TankManager;
 import forestry.core.fluids.tanks.FilteredTank;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.tiles.TileBase;
 import forestry.core.utils.ItemStackUtil;
+import forestry.factory.gui.ContainerRaintank;
+import forestry.factory.gui.GuiRaintank;
 import forestry.factory.inventory.InventoryRaintank;
 
 public class TileRaintank extends TileBase implements ISidedInventory, ILiquidTankTile, IFluidHandler {
@@ -52,7 +54,7 @@ public class TileRaintank extends TileBase implements ISidedInventory, ILiquidTa
 	private ItemStack usedEmpty;
 
 	public TileRaintank() {
-		super(GuiId.RaintankGUI, "raintank");
+		super("raintank");
 		setInternalInventory(new InventoryRaintank(this));
 
 		resourceTank = new FilteredTank(Constants.RAINTANK_TANK_CAPACITY, FluidRegistry.WATER);
@@ -65,7 +67,7 @@ public class TileRaintank extends TileBase implements ISidedInventory, ILiquidTa
 		if (worldObj != null) {
 			BiomeGenBase biome = worldObj.getBiomeGenForCoordsBody(xCoord, zCoord);
 			isValidBiome = BiomeHelper.canRainOrSnow(biome);
-			getErrorLogic().setCondition(!isValidBiome, EnumErrorCode.INVALIDBIOME);
+			getErrorLogic().setCondition(!isValidBiome, EnumErrorCode.NO_RAIN_BIOME);
 		}
 
 		super.validate();
@@ -110,12 +112,12 @@ public class TileRaintank extends TileBase implements ISidedInventory, ILiquidTa
 
 		IErrorLogic errorLogic = getErrorLogic();
 
-		errorLogic.setCondition(!isValidBiome, EnumErrorCode.INVALIDBIOME);
+		errorLogic.setCondition(!isValidBiome, EnumErrorCode.NO_RAIN_BIOME);
 
 		boolean hasSky = worldObj.canBlockSeeTheSky(xCoord, yCoord + 1, zCoord);
-		errorLogic.setCondition(!hasSky, EnumErrorCode.NOSKY);
+		errorLogic.setCondition(!hasSky, EnumErrorCode.NO_SKY_RAIN_TANK);
 
-		errorLogic.setCondition(!worldObj.isRaining(), EnumErrorCode.NOTRAINING);
+		errorLogic.setCondition(!worldObj.isRaining(), EnumErrorCode.NOT_RAINING);
 
 		if (!errorLogic.hasErrors()) {
 			resourceTank.fill(STACK_WATER, true);
@@ -201,5 +203,15 @@ public class TileRaintank extends TileBase implements ISidedInventory, ILiquidTa
 	@Override
 	public FluidTankInfo[] getTankInfo(ForgeDirection from) {
 		return tankManager.getTankInfo(from);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiRaintank(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerRaintank(player.inventory, this);
 	}
 }

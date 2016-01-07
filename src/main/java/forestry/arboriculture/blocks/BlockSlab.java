@@ -12,9 +12,7 @@ package forestry.arboriculture.blocks;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
-import net.minecraft.block.Block;
 import net.minecraft.block.ITileEntityProvider;
 import net.minecraft.block.material.Material;
 import net.minecraft.client.particle.EffectRenderer;
@@ -24,7 +22,6 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.init.Blocks;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.IIcon;
 import net.minecraft.util.MovingObjectPosition;
@@ -49,8 +46,8 @@ public class BlockSlab extends net.minecraft.block.BlockSlab implements IWoodTyp
 	private final ParticleHelper.Callback particleCallback;
 	private final boolean fireproof;
 
-	public BlockSlab(boolean fireproof) {
-		super(false, Material.wood);
+	public BlockSlab(boolean doubleSlab, boolean fireproof) {
+		super(doubleSlab, Material.wood);
 
 		this.fireproof = fireproof;
 
@@ -64,9 +61,8 @@ public class BlockSlab extends net.minecraft.block.BlockSlab implements IWoodTyp
 		this.particleCallback = new ParticleHelper.DefaultCallback(this);
 	}
 
-	@Override
-	public boolean isOpaqueCube() {
-		return false;
+	public boolean isDoubleSlab() {
+		return field_150004_a;
 	}
 
 	/* ICONS */
@@ -91,11 +87,6 @@ public class BlockSlab extends net.minecraft.block.BlockSlab implements IWoodTyp
 	}
 
 	@Override
-	public Item getItemDropped(int meta, Random random, int par3) {
-		return Item.getItemFromBlock(this);
-	}
-
-	@Override
 	protected ItemStack createStackedBlock(int meta) {
 		return new ItemStack(Blocks.wooden_slab, 2, meta & 7);
 	}
@@ -108,8 +99,10 @@ public class BlockSlab extends net.minecraft.block.BlockSlab implements IWoodTyp
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	@Override
 	public void getSubBlocks(Item item, CreativeTabs par2CreativeTabs, List list) {
-		for (EnumWoodType woodType : EnumWoodType.VALUES) {
-			list.add(TreeManager.woodItemAccess.getSlab(woodType, fireproof));
+		if (!isDoubleSlab()) {
+			for (EnumWoodType woodType : EnumWoodType.VALUES) {
+				list.add(TreeManager.woodItemAccess.getSlab(woodType, fireproof));
+			}
 		}
 	}
 
@@ -121,10 +114,7 @@ public class BlockSlab extends net.minecraft.block.BlockSlab implements IWoodTyp
 	/* PROPERTIES */
 	@Override
 	public final ItemStack getPickBlock(MovingObjectPosition target, World world, int x, int y, int z) {
-		ItemStack itemStack = new ItemStack(this);
-		NBTTagCompound nbt = TileWood.getTagCompound(world, x, y, z);
-		itemStack.setTagCompound(nbt);
-		return itemStack;
+		return TileWood.getPickBlock(this, world, x, y, z);
 	}
 
 	/* DROP HANDLING */

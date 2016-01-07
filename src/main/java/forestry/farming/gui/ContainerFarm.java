@@ -17,7 +17,7 @@ import net.minecraftforge.fluids.IFluidTank;
 import forestry.core.gui.ContainerSocketed;
 import forestry.core.gui.slots.SlotFiltered;
 import forestry.core.gui.slots.SlotOutput;
-import forestry.core.network.PacketGuiUpdate;
+import forestry.core.network.packets.PacketGuiUpdate;
 import forestry.farming.multiblock.InventoryFarm;
 import forestry.farming.tiles.TileFarm;
 
@@ -68,7 +68,7 @@ public class ContainerFarm extends ContainerSocketed<TileFarm> {
 	}
 
 	public IFluidTank getTank(int slot) {
-		return tile.getFarmController().getTankManager().getTank(slot);
+		return tile.getMultiblockLogic().getController().getTankManager().getTank(slot);
 	}
 
 }

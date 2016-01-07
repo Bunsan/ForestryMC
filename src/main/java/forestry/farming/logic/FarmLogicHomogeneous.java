@@ -11,6 +11,7 @@
 package forestry.farming.logic;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import net.minecraft.block.Block;
 import net.minecraft.item.ItemStack;
@@ -29,15 +30,18 @@ public abstract class FarmLogicHomogeneous extends FarmLogic {
 
 	private final ItemStack resource;
 	private final ItemStack soilBlock;
-	protected final Iterable<IFarmable> germlings;
+	protected final List<IFarmable> germlings;
 
-	ArrayList<ItemStack> produce = new ArrayList<>();
+	List<ItemStack> produce = new ArrayList<>();
 
 	protected FarmLogicHomogeneous(IFarmHousing housing, ItemStack resource, ItemStack soilBlock, Iterable<IFarmable> germlings) {
 		super(housing);
 		this.resource = resource;
 		this.soilBlock = soilBlock;
-		this.germlings = germlings;
+		this.germlings = new ArrayList<>();
+		for (IFarmable germling : germlings) {
+			this.germlings.add(germling);
+		}
 	}
 
 	protected boolean isAcceptedSoil(ItemStack itemStack) {
@@ -59,7 +63,8 @@ public abstract class FarmLogicHomogeneous extends FarmLogic {
 		return false;
 	}
 
-	protected boolean isWindfall(ItemStack itemstack) {
+	@Override
+	public boolean isAcceptedWindfall(ItemStack itemstack) {
 		for (IFarmable germling : germlings) {
 			if (germling.isWindfall(itemstack)) {
 				return true;
@@ -75,11 +80,7 @@ public abstract class FarmLogicHomogeneous extends FarmLogic {
 			return true;
 		}
 
-		if (maintainGermlings(x, y + 1, z, direction, extent)) {
-			return true;
-		}
-
-		return false;
+		return maintainGermlings(x, y + 1, z, direction, extent);
 	}
 
 	private boolean maintainSoil(int x, int yGround, int z, FarmDirection direction, int extent) {

@@ -13,8 +13,6 @@ package forestry.apiculture.genetics;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.nbt.NBTTagCompound;
 
-import com.mojang.authlib.GameProfile;
-
 import forestry.api.apiculture.BeeManager;
 import forestry.api.apiculture.EnumBeeChromosome;
 import forestry.api.apiculture.IApiaristTracker;
@@ -27,11 +25,7 @@ public class ApiaristTracker extends BreedingTracker implements IApiaristTracker
 
 	/** Required for creation from map storage */
 	public ApiaristTracker(String s) {
-		this(s, null);
-	}
-
-	public ApiaristTracker(String s, GameProfile player) {
-		super(s, player);
+		super(s);
 	}
 
 	private int queensTotal = 0;

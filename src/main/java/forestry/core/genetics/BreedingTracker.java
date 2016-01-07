@@ -10,7 +10,9 @@
  ******************************************************************************/
 package forestry.core.genetics;
 
+import javax.annotation.Nullable;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
@@ -18,11 +20,13 @@ import java.util.Set;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.world.World;
 import net.minecraft.world.WorldSavedData;
 
 import com.mojang.authlib.GameProfile;
 
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.common.util.FakePlayer;
 
 import forestry.api.core.ForestryEvent;
 import forestry.api.genetics.AlleleManager;
@@ -31,7 +35,7 @@ import forestry.api.genetics.IBreedingTracker;
 import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.IMutation;
 import forestry.api.genetics.ISpeciesRoot;
-import forestry.core.network.PacketGenomeTrackerUpdate;
+import forestry.core.network.packets.PacketGenomeTrackerSync;
 import forestry.core.proxy.Proxies;
 
 public abstract class BreedingTracker extends WorldSavedData implements IBreedingTracker {
@@ -44,6 +48,7 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 	private static final String RESEARCHED_KEY = "RD";
 	private static final String MODE_NAME_KEY = "BMS";
 	private static final String MUTATION_FORMAT = "%s-%s=%s";
+	private static final Collection<String> emptyStringCollection = Collections.emptyList();
 
 	public static final String TYPE_KEY = "TYPE";
 
@@ -52,11 +57,21 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 	private final Set<String> researchedMutations = new HashSet<>();
 	private String modeName;
 
-	private final GameProfile username;
+	@Nullable
+	private GameProfile username;
+	@Nullable
+	private World world;
 
-	protected BreedingTracker(String s, GameProfile username) {
+	protected BreedingTracker(String s) {
 		super(s);
+	}
+
+	public void setUsername(@Nullable GameProfile username) {
 		this.username = username;
+	}
+
+	public void setWorld(@Nullable World world) {
+		this.world = world;
 	}
 
 	@Override
@@ -85,14 +100,31 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 
 	@Override
 	public void synchToPlayer(EntityPlayer player) {
-		if (player instanceof EntityPlayerMP) {
+		if (player instanceof EntityPlayerMP && !(player instanceof FakePlayer)) {
 			IBreedingTracker breedingTracker = getBreedingTracker(player);
 			String modeName = breedingTracker.getModeName();
 			setModeName(modeName);
 
 			NBTTagCompound nbttagcompound = new NBTTagCompound();
 			encodeToNBT(nbttagcompound);
-			Proxies.net.sendToPlayer(new PacketGenomeTrackerUpdate(nbttagcompound), (EntityPlayerMP) player);
+			PacketGenomeTrackerSync packet = new PacketGenomeTrackerSync(nbttagcompound);
+			Proxies.net.sendToPlayer(packet, player);
+		}
+	}
+
+	private void syncToPlayer(Collection<String> discoveredSpecies, Collection<String> discoveredMutations, Collection<String> researchedMutations) {
+		if (world != null && username != null && username.getName() != null) {
+			EntityPlayer player = world.getPlayerEntityByName(username.getName());
+			if (player instanceof EntityPlayerMP && !(player instanceof FakePlayer)) {
+				IBreedingTracker breedingTracker = getBreedingTracker(player);
+				String modeName = breedingTracker.getModeName();
+				setModeName(modeName);
+
+				NBTTagCompound nbtTagCompound = new NBTTagCompound();
+				writeToNBT(nbtTagCompound, discoveredSpecies, discoveredMutations, researchedMutations);
+				PacketGenomeTrackerSync packet = new PacketGenomeTrackerSync(nbtTagCompound);
+				Proxies.net.sendToPlayer(packet, player);
+			}
 		}
 	}
 
@@ -121,20 +153,22 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 
 	@Override
 	public void writeToNBT(NBTTagCompound nbttagcompound) {
-
-		if (modeName != null && !modeName.isEmpty()) {
-			nbttagcompound.setString(MODE_NAME_KEY, modeName);
-		}
-
-		nbttagcompound.setString(TYPE_KEY, speciesRootUID());
-
-		writeValuesToNBT(nbttagcompound, discoveredSpecies, SPECIES_COUNT_KEY, SPECIES_KEY);
-		writeValuesToNBT(nbttagcompound, discoveredMutations, MUTATIONS_COUNT_KEY, MUTATIONS_KEY);
-		writeValuesToNBT(nbttagcompound, researchedMutations, RESEARCHED_COUNT_KEY, RESEARCHED_KEY);
+		writeToNBT(nbttagcompound, discoveredSpecies, discoveredMutations, researchedMutations);
 	}
 
-	private static void readValuesFromNBT(NBTTagCompound nbttagcompound, Collection<String> values, String countKey, String key) {
-		values.clear();
+	private void writeToNBT(NBTTagCompound nbtTagCompound, Collection<String> discoveredSpecies, Collection<String> discoveredMutations, Collection<String> researchedMutations) {
+		if (modeName != null && !modeName.isEmpty()) {
+			nbtTagCompound.setString(MODE_NAME_KEY, modeName);
+		}
+
+		nbtTagCompound.setString(TYPE_KEY, speciesRootUID());
+
+		writeValuesToNBT(nbtTagCompound, discoveredSpecies, SPECIES_COUNT_KEY, SPECIES_KEY);
+		writeValuesToNBT(nbtTagCompound, discoveredMutations, MUTATIONS_COUNT_KEY, MUTATIONS_KEY);
+		writeValuesToNBT(nbtTagCompound, researchedMutations, RESEARCHED_COUNT_KEY, RESEARCHED_KEY);
+	}
+
+	private static void readValuesFromNBT(NBTTagCompound nbttagcompound, Set<String> values, String countKey, String key) {
 		if (nbttagcompound.hasKey(countKey)) {
 			final int count = nbttagcompound.getInteger(countKey);
 			for (int i = 0; i < count; i++) {
@@ -175,13 +209,15 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 			ISpeciesRoot speciesRoot = AlleleManager.alleleRegistry.getSpeciesRoot(speciesRootUID());
 			ForestryEvent event = new ForestryEvent.MutationDiscovered(speciesRoot, username, mutation, this);
 			MinecraftForge.EVENT_BUS.post(event);
+
+			syncToPlayer(emptyStringCollection, Collections.singleton(mutationString), emptyStringCollection);
 		}
 	}
 
 	@Override
 	public boolean isDiscovered(IMutation mutation) {
 		String mutationString = getMutationString(mutation);
-		return discoveredMutations.contains(mutationString);
+		return discoveredMutations.contains(mutationString) || researchedMutations.contains(mutationString);
 	}
 
 	@Override
@@ -208,6 +244,8 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 			ISpeciesRoot speciesRoot = AlleleManager.alleleRegistry.getSpeciesRoot(speciesRootUID());
 			ForestryEvent event = new ForestryEvent.SpeciesDiscovered(speciesRoot, username, species, this);
 			MinecraftForge.EVENT_BUS.post(event);
+
+			syncToPlayer(Collections.singleton(species.getUID()), emptyStringCollection, emptyStringCollection);
 		}
 	}
 
@@ -219,6 +257,8 @@ public abstract class BreedingTracker extends WorldSavedData implements IBreedin
 			markDirty();
 
 			registerMutation(mutation);
+
+			syncToPlayer(emptyStringCollection, emptyStringCollection, Collections.singleton(mutationString));
 		}
 	}
 

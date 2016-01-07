@@ -30,7 +30,7 @@ import forestry.core.config.Constants;
 import forestry.core.genetics.mutations.EnumMutateChance;
 import forestry.core.gui.buttons.GuiBetterButton;
 import forestry.core.gui.buttons.StandardButtonTextureSets;
-import forestry.core.network.PacketGuiSelectRequest;
+import forestry.core.network.packets.PacketGuiSelectRequest;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.StringUtil;
 
@@ -62,7 +62,7 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 	protected void drawGuiContainerBackgroundLayer(float f, int i, int j) {
 		super.drawGuiContainerBackgroundLayer(f, i, j);
 		String header = StringUtil.localize("gui.page") + " " + (pageCurrent + 1) + "/" + pageMax;
-		fontRendererObj.drawString(header, guiLeft + 95 + getCenteredOffset(header, 98), guiTop + 10, fontColor.get("gui.title"));
+		fontRendererObj.drawString(header, guiLeft + 95 + textLayout.getCenteredOffset(header, 98), guiTop + 10, fontColor.get("gui.title"));
 
 		IIndividual individual = getIndividualAtPosition(i, j);
 		if (individual == null) {
@@ -71,14 +71,14 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 
 		if (individual != null) {
 			RenderHelper.enableGUIStandardItemLighting();
-			startPage();
+			textLayout.startPage();
 
 			displaySpeciesInformation(true, individual.getGenome().getPrimary(), iconStacks.get(individual.getIdent()), 10);
 			if (!individual.isPureBred(EnumTreeChromosome.SPECIES)) {
 				displaySpeciesInformation(individual.isAnalyzed(), individual.getGenome().getSecondary(), iconStacks.get(individual.getGenome().getSecondary().getUID()), 10);
 			}
 
-			endPage();
+			textLayout.endPage();
 		}
 	}
 
@@ -129,40 +129,38 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 
 	private void displayBreedingStatistics(int x) {
 
-		startPage();
+		textLayout.startPage();
 
-		drawLine(StringUtil.localize("gui.speciescount") + ": " + breedingTracker.getSpeciesBred() + "/" + speciesRoot.getSpeciesCount(), x);
-		newLine();
-		newLine();
+		textLayout.drawLine(StringUtil.localize("gui.speciescount") + ": " + breedingTracker.getSpeciesBred() + "/" + speciesRoot.getSpeciesCount(), x);
+		textLayout.newLine();
+		textLayout.newLine();
 
 		if (breedingTracker instanceof IApiaristTracker) {
 			IApiaristTracker tracker = (IApiaristTracker) breedingTracker;
-			drawLine(StringUtil.localize("gui.queens") + ": " + tracker.getQueenCount(), x);
-			newLine();
+			textLayout.drawLine(StringUtil.localize("gui.queens") + ": " + tracker.getQueenCount(), x);
+			textLayout.newLine();
 
-			drawLine(StringUtil.localize("gui.princesses") + ": " + tracker.getPrincessCount(), x);
-			newLine();
+			textLayout.drawLine(StringUtil.localize("gui.princesses") + ": " + tracker.getPrincessCount(), x);
+			textLayout.newLine();
 
-			drawLine(StringUtil.localize("gui.drones") + ": " + tracker.getDroneCount(), x);
-			newLine();
+			textLayout.drawLine(StringUtil.localize("gui.drones") + ": " + tracker.getDroneCount(), x);
+			textLayout.newLine();
 		}
 
-		endPage();
+		textLayout.endPage();
 	}
 
 	private void displaySpeciesInformation(boolean analyzed, IAlleleSpecies species, ItemStack iconStack, int x) {
 
 		if (!analyzed) {
-			drawLine(StringUtil.localize("gui.unknown"), x);
+			textLayout.drawLine(StringUtil.localize("gui.unknown"), x);
 			return;
 		}
 
-		drawLine(species.getName(), x);
-		RenderHelper.enableGUIStandardItemLighting();
-		drawItemStack(iconStack, guiLeft + x + 69, guiTop + getLineY() - 2);
-		RenderHelper.disableStandardItemLighting();
+		textLayout.drawLine(species.getName(), x);
+		GuiUtil.drawItemStack(this, iconStack, guiLeft + x + 69, guiTop + textLayout.getLineY() - 2);
 
-		newLine();
+		textLayout.newLine();
 
 		// Viable Combinations
 		int columnWidth = 16;
@@ -182,19 +180,16 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 			column += columnWidth;
 			if (column > 75) {
 				column = 10;
-				newLine(18);
+				textLayout.newLine(18);
 			}
 		}
 
-		newLine();
-		newLine();
+		textLayout.newLine();
+		textLayout.newLine();
 	}
 
 	private void drawMutationIcon(IMutation combination, IAlleleSpecies species, int x) {
-
-		RenderHelper.enableGUIStandardItemLighting();
-		drawItemStack(iconStacks.get(combination.getPartner(species).getUID()), guiLeft + x, guiTop + getLineY());
-		RenderHelper.disableStandardItemLighting();
+		GuiUtil.drawItemStack(this, iconStacks.get(combination.getPartner(species).getUID()), guiLeft + x, guiTop + textLayout.getLineY());
 
 		int line = 48;
 		int column;
@@ -220,7 +215,7 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 		}
 
 		Proxies.render.bindTexture(textureFile);
-		drawTexturedModalRect(guiLeft + x, guiTop + getLineY(), column, line, 16, 16);
+		drawTexturedModalRect(guiLeft + x, guiTop + textLayout.getLineY(), column, line, 16, 16);
 
 	}
 
@@ -251,11 +246,6 @@ public class GuiNaturalistInventory extends GuiForestry<Container, IPagedInvento
 		}
 
 		Proxies.render.bindTexture(textureFile);
-		drawTexturedModalRect(guiLeft + x, guiTop + getLineY(), column, line, 16, 16);
-	}
-
-	@Override
-	protected boolean checkHotbarKeys(int key) {
-		return false;
+		drawTexturedModalRect(guiLeft + x, guiTop + textLayout.getLineY(), column, line, 16, 16);
 	}
 }

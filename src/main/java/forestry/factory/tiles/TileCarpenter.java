@@ -37,14 +37,16 @@ import forestry.core.inventory.InventoryAdapterTile;
 import forestry.core.inventory.wrappers.InventoryMapper;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.render.TankRenderInfo;
 import forestry.core.tiles.IItemStackDisplay;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.tiles.TilePowered;
 import forestry.core.utils.InventoryUtil;
 import forestry.core.utils.PlayerUtil;
+import forestry.factory.gui.ContainerCarpenter;
+import forestry.factory.gui.GuiCarpenter;
 import forestry.factory.inventory.InventoryCarpenter;
+import forestry.factory.inventory.InventoryGhostCrafting;
 import forestry.factory.recipes.CarpenterRecipeManager;
 
 public class TileCarpenter extends TilePowered implements ISidedInventory, ILiquidTankTile, IFluidHandler, IItemStackDisplay {
@@ -65,11 +67,11 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 	}
 
 	public TileCarpenter() {
-		super(GuiId.CarpenterGUI, "carpenter", 1100, 4000);
+		super("carpenter", 1100, 4000);
 		setEnergyPerWorkCycle(ENERGY_PER_WORK_CYCLE);
-		resourceTank = new FilteredTank(Constants.PROCESSOR_TANK_CAPACITY, CarpenterRecipeManager.recipeFluids);
+		resourceTank = new FilteredTank(Constants.PROCESSOR_TANK_CAPACITY, CarpenterRecipeManager.getRecipeFluids());
 
-		craftingInventory = new InventoryAdapterTile<>(this, 10, "CraftItems");
+		craftingInventory = new InventoryGhostCrafting<>(this, 10);
 		craftPreviewInventory = new InventoryCraftResult();
 		setInternalInventory(new InventoryCarpenter(this));
 
@@ -136,7 +138,10 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 
 	@Override
 	public boolean workCycle() {
-		if (!removeResources(true)) {
+		if (!removeLiquidResources(true)) {
+			return false;
+		}
+		if (!removeItemResources(true)) {
 			return false;
 		}
 
@@ -146,7 +151,7 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 		return true;
 	}
 
-	private boolean removeResources(boolean doRemove) {
+	private boolean removeLiquidResources(boolean doRemove) {
 		if (currentRecipe == null) {
 			return true;
 		}
@@ -161,6 +166,14 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 			}
 		}
 
+		return true;
+	}
+
+	private boolean removeItemResources(boolean doRemove) {
+		if (currentRecipe == null) {
+			return true;
+		}
+
 		if (currentRecipe.getBox() != null) {
 			ItemStack box = getStackInSlot(InventoryCarpenter.SLOT_BOX);
 			if (box == null || box.stackSize == 0) {
@@ -172,7 +185,7 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 		}
 
 		EntityPlayer player = PlayerUtil.getPlayer(worldObj, getAccessHandler().getOwner());
-		ItemStack[] craftingSets = InventoryUtil.getStacks(craftingInventory, InventoryCarpenter.SLOT_CRAFTING_1, InventoryCarpenter.SLOT_CRAFTING_COUNT);
+		ItemStack[] craftingSets = InventoryUtil.getStacks(craftingInventory, InventoryGhostCrafting.SLOT_CRAFTING_1, InventoryGhostCrafting.SLOT_CRAFTING_COUNT);
 		IInventory inventory = new InventoryMapper(getInternalInventory(), InventoryCarpenter.SLOT_INVENTORY_1, InventoryCarpenter.SLOT_INVENTORY_COUNT);
 		return InventoryUtil.removeSets(inventory, 1, craftingSets, player, true, true, false, doRemove);
 	}
@@ -185,22 +198,25 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 		}
 
 		boolean hasRecipe = (currentRecipe != null);
-		boolean hasResources = true;
+		boolean hasLiquidResources = true;
+		boolean hasItemResources = true;
 		boolean canAdd = true;
 
 		if (hasRecipe) {
-			hasResources = removeResources(false);
+			hasLiquidResources = removeLiquidResources(false);
+			hasItemResources = removeItemResources(false);
 
 			ItemStack pendingProduct = currentRecipe.getCraftingGridRecipe().getRecipeOutput();
 			canAdd = InventoryUtil.tryAddStack(this, pendingProduct, InventoryCarpenter.SLOT_PRODUCT, InventoryCarpenter.SLOT_PRODUCT_COUNT, true, false);
 		}
 
 		IErrorLogic errorLogic = getErrorLogic();
-		errorLogic.setCondition(!hasRecipe, EnumErrorCode.NORECIPE);
-		errorLogic.setCondition(!hasResources, EnumErrorCode.NORESOURCE);
-		errorLogic.setCondition(!canAdd, EnumErrorCode.NOSPACE);
+		errorLogic.setCondition(!hasRecipe, EnumErrorCode.NO_RECIPE);
+		errorLogic.setCondition(!hasLiquidResources, EnumErrorCode.NO_RESOURCE_LIQUID);
+		errorLogic.setCondition(!hasItemResources, EnumErrorCode.NO_RESOURCE_INVENTORY);
+		errorLogic.setCondition(!canAdd, EnumErrorCode.NO_SPACE_INVENTORY);
 
-		return hasRecipe && hasResources && canAdd;
+		return hasRecipe && hasItemResources && hasLiquidResources && canAdd;
 	}
 
 	@Override
@@ -258,5 +274,15 @@ public class TileCarpenter extends TilePowered implements ISidedInventory, ILiqu
 	@Override
 	public FluidTankInfo[] getTankInfo(ForgeDirection from) {
 		return tankManager.getTankInfo(from);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiCarpenter(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerCarpenter(player.inventory, this);
 	}
 }

@@ -11,6 +11,7 @@
 package forestry.mail.gui;
 
 import net.minecraft.entity.player.InventoryPlayer;
+import net.minecraft.util.StatCollector;
 
 import forestry.core.config.Constants;
 import forestry.core.gui.GuiForestry;
@@ -27,14 +28,14 @@ public class GuiTrader extends GuiForestry<ContainerTrader, TileTrader> {
 
 	@Override
 	protected void drawGuiContainerForegroundLayer(int mouseX, int mouseY) {
-		String name = StringUtil.localizeTile(inventory.getUnlocalizedTitle());
-		this.fontRendererObj.drawString(name, getCenteredOffset(name), 6, fontColor.get("gui.mail.text"));
+		String name = StatCollector.translateToLocal(inventory.getUnlocalizedTitle());
+		this.fontRendererObj.drawString(name, textLayout.getCenteredOffset(name), 6, fontColor.get("gui.mail.text"));
 
 		String receive = StringUtil.localize("gui.mail.receive");
-		this.fontRendererObj.drawString(receive, getCenteredOffset(receive, 70) + 51, 45, fontColor.get("gui.mail.text"));
+		this.fontRendererObj.drawString(receive, textLayout.getCenteredOffset(receive, 70) + 51, 45, fontColor.get("gui.mail.text"));
 
 		String send = StringUtil.localize("gui.mail.send");
-		this.fontRendererObj.drawString(send, getCenteredOffset(send, 70) + 51, 99, fontColor.get("gui.mail.text"));
+		this.fontRendererObj.drawString(send, textLayout.getCenteredOffset(send, 70) + 51, 99, fontColor.get("gui.mail.text"));
 
 		super.drawGuiContainerForegroundLayer(mouseX, mouseY);
 	}

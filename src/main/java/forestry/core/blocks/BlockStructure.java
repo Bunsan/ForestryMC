@@ -12,15 +12,22 @@ package forestry.core.blocks;
 
 import net.minecraft.block.Block;
 import net.minecraft.block.material.Material;
+import net.minecraft.entity.EntityLivingBase;
 import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.inventory.IInventory;
+import net.minecraft.item.ItemStack;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.util.ChatComponentText;
 import net.minecraft.util.StatCollector;
 import net.minecraft.world.World;
 
+import com.mojang.authlib.GameProfile;
+
+import forestry.api.multiblock.IMultiblockComponent;
+import forestry.api.multiblock.IMultiblockController;
 import forestry.core.circuits.ISocketable;
-import forestry.core.multiblock.MultiblockControllerBase;
-import forestry.core.multiblock.MultiblockTileEntityBase;
+import forestry.core.multiblock.MultiblockTileEntityForestry;
+import forestry.core.multiblock.MultiblockUtil;
 import forestry.core.utils.InventoryUtil;
 
 public abstract class BlockStructure extends BlockForestry {
@@ -43,26 +50,23 @@ public abstract class BlockStructure extends BlockForestry {
 			return false;
 		}
 
-		MultiblockTileEntityBase part;
-		MultiblockControllerBase controller;
-
 		TileEntity tile = world.getTileEntity(x, y, z);
-		if (tile instanceof MultiblockTileEntityBase) {
-			part = (MultiblockTileEntityBase) tile;
-			controller = part.getMultiblockController();
-		} else {
+		if (!(tile instanceof MultiblockTileEntityForestry)) {
 			return false;
 		}
+
+		MultiblockTileEntityForestry part = (MultiblockTileEntityForestry) tile;
+		IMultiblockController controller = part.getMultiblockLogic().getController();
 
 		// If the player's hands are empty and they right-click on a multiblock, they get a
 		// multiblock-debugging message if the machine is not assembled.
 		if (player.getCurrentEquippedItem() == null && !controller.isAssembled()) {
 			if (controller != null) {
-				Exception e = controller.getLastValidationException();
-				if (e != null) {
+				String validationError = controller.getLastValidationError();
+				if (validationError != null) {
 					long tick = world.getTotalWorldTime();
 					if (tick > previousMessageTick + 20) {
-						player.addChatMessage(new ChatComponentText(e.getMessage()));
+						player.addChatMessage(new ChatComponentText(validationError));
 						previousMessageTick = tick;
 					}
 					return true;
@@ -85,6 +89,23 @@ public abstract class BlockStructure extends BlockForestry {
 	}
 
 	@Override
+	public void onBlockPlacedBy(World world, int i, int j, int k, EntityLivingBase entityLiving, ItemStack itemstack) {
+		if (world.isRemote) {
+			return;
+		}
+
+		if (entityLiving instanceof EntityPlayer) {
+			TileEntity tile = world.getTileEntity(i, j, k);
+
+			if (tile instanceof MultiblockTileEntityForestry) {
+				EntityPlayer player = (EntityPlayer) entityLiving;
+				GameProfile gameProfile = player.getGameProfile();
+				((MultiblockTileEntityForestry) tile).setOwner(gameProfile);
+			}
+		}
+	}
+
+	@Override
 	public void breakBlock(World world, int x, int y, int z, Block block, int meta) {
 
 		if (world.isRemote) {
@@ -92,14 +113,16 @@ public abstract class BlockStructure extends BlockForestry {
 		}
 
 		TileEntity tile = world.getTileEntity(x, y, z);
-		if (tile instanceof MultiblockTileEntityBase) {
-			MultiblockTileEntityBase part = (MultiblockTileEntityBase) tile;
+		if (tile instanceof IMultiblockComponent) {
+			IMultiblockComponent part = (IMultiblockComponent) tile;
 
 			// drop inventory if we're the last part remaining
-			if (part.getNeighboringParts().length == 0) {
-				InventoryUtil.dropInventory(part, world, x, y, z);
+			if (MultiblockUtil.getNeighboringParts(world, part).size() == 0) {
+				if (tile instanceof IInventory) {
+					InventoryUtil.dropInventory((IInventory) tile, world, x, y, z);
+				}
 				if (tile instanceof ISocketable) {
-					InventoryUtil.dropSockets((ISocketable) tile, tile.getWorldObj(), tile.xCoord, tile.yCoord, tile.zCoord);
+					InventoryUtil.dropSockets((ISocketable) tile, world, x, y, z);
 				}
 			}
 		}

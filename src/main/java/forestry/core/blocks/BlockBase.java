@@ -40,7 +40,7 @@ import cpw.mods.fml.relauncher.SideOnly;
 import forestry.core.access.IAccessHandler;
 import forestry.core.circuits.ISocketable;
 import forestry.core.fluids.FluidHelper;
-import forestry.core.proxy.ProxyRenderClient;
+import forestry.core.proxy.Proxies;
 import forestry.core.tiles.MachineDefinition;
 import forestry.core.tiles.TileBase;
 import forestry.core.tiles.TileForestry;
@@ -48,24 +48,29 @@ import forestry.core.tiles.TileUtil;
 import forestry.core.utils.InventoryUtil;
 import forestry.core.utils.PlayerUtil;
 
-public class BlockBase extends BlockForestry {
-
+public class BlockBase<T extends IMachineProperties> extends BlockForestry {
 	private final List<MachineDefinition> definitions = new ArrayList<>();
 	private final boolean hasTESR;
 
-	public BlockBase(Material material) {
-		this(material, false);
+	public BlockBase() {
+		this(false);
 	}
 
-	public BlockBase(Material material, boolean hasTESR) {
-		super(material);
+	public BlockBase(boolean hasTESR) {
+		super(Material.iron);
 
 		this.hasTESR = hasTESR;
 		this.opaque = this.isOpaqueCube();
 		this.lightOpacity = this.isOpaqueCube() ? 255 : 0;
 	}
 
-	public MachineDefinition addDefinition(MachineDefinition definition) {
+	public void addDefinitions(MachineDefinition... definitions) {
+		for (MachineDefinition definition : definitions) {
+			addDefinition(definition);
+		}
+	}
+
+	public void addDefinition(MachineDefinition definition) {
 		definition.setBlock(this);
 
 		while (definitions.size() <= definition.getMeta()) {
@@ -73,8 +78,6 @@ public class BlockBase extends BlockForestry {
 		}
 
 		definitions.set(definition.getMeta(), definition);
-
-		return definition;
 	}
 
 	@Override
@@ -90,19 +93,23 @@ public class BlockBase extends BlockForestry {
 	@Override
 	public int getRenderType() {
 		if (hasTESR) {
-			return ProxyRenderClient.getByBlockModelRenderId();
+			return Proxies.render.getByBlockModelRenderId();
 		} else {
 			return 0;
 		}
 	}
 
 	private MachineDefinition getDefinition(IBlockAccess world, int x, int y, int z) {
-		return getDefinition(world.getBlockMetadata(x, y, z));
+		if (!(world.getBlock(x, y, z) instanceof BlockBase)) {
+			return null;
+		}
+		int meta = world.getBlockMetadata(x, y, z);
+		return getDefinition(meta);
 	}
 
 	private MachineDefinition getDefinition(int metadata) {
-		if (metadata >= definitions.size() || definitions.get(metadata) == null) {
-			return definitions.get(0);
+		if (metadata < 0 || metadata >= definitions.size()) {
+			return null;
 		}
 
 		return definitions.get(metadata);
@@ -110,7 +117,7 @@ public class BlockBase extends BlockForestry {
 
 	@Override
 	public AxisAlignedBB getCollisionBoundingBoxFromPool(World world, int x, int y, int z) {
-		MachineDefinition definition = definitions.get(world.getBlockMetadata(x, y, z));
+		MachineDefinition definition = getDefinition(world, x, y, z);
 		if (definition == null) {
 			return super.getCollisionBoundingBoxFromPool(world, x, y, z);
 		}
@@ -120,7 +127,7 @@ public class BlockBase extends BlockForestry {
 	@Override
 	@SideOnly(Side.CLIENT)
 	public AxisAlignedBB getSelectedBoundingBoxFromPool(World world, int x, int y, int z) {
-		MachineDefinition definition = definitions.get(world.getBlockMetadata(x, y, z));
+		MachineDefinition definition = getDefinition(world, x, y, z);
 		if (definition == null) {
 			return super.getCollisionBoundingBoxFromPool(world, x, y, z);
 		}
@@ -129,7 +136,7 @@ public class BlockBase extends BlockForestry {
 
 	@Override
 	public MovingObjectPosition collisionRayTrace(World world, int x, int y, int z, Vec3 startVec, Vec3 endVec) {
-		MachineDefinition definition = definitions.get(world.getBlockMetadata(x, y, z));
+		MachineDefinition definition = getDefinition(world, x, y, z);
 		if (definition == null) {
 			return super.collisionRayTrace(world, x, y, z, startVec, endVec);
 		} else {
@@ -153,11 +160,7 @@ public class BlockBase extends BlockForestry {
 	/* TILE ENTITY CREATION */
 	@Override
 	public TileEntity createTileEntity(World world, int metadata) {
-		if (metadata >= definitions.size() || definitions.get(metadata) == null) {
-			metadata = 0;
-		}
-
-		MachineDefinition definition = definitions.get(metadata);
+		MachineDefinition definition = getDefinition(metadata);
 		if (definition == null) {
 			return null;
 		}
@@ -210,7 +213,11 @@ public class BlockBase extends BlockForestry {
 
 	@Override
 	public boolean rotateBlock(World world, int x, int y, int z, ForgeDirection axis) {
-		return getDefinition(world, x, y, z).rotateBlock(world, x, y, z, axis);
+		MachineDefinition definition = getDefinition(world, x, y, z);
+		if (definition == null) {
+			return super.rotateBlock(world, x, y, z, axis);
+		}
+		return definition.rotateBlock(world, x, y, z, axis);
 	}
 
 	@Override
@@ -237,6 +244,14 @@ public class BlockBase extends BlockForestry {
 	@Override
 	public int damageDropped(int metadata) {
 		return metadata;
+	}
+
+	public void init() {
+		for (MachineDefinition def : definitions) {
+			if (def != null) {
+				def.register();
+			}
+		}
 	}
 
 	/* TEXTURES */
@@ -273,5 +288,9 @@ public class BlockBase extends BlockForestry {
 	@Override
 	public boolean getUseNeighborBrightness() {
 		return hasTESR;
+	}
+
+	public final ItemStack get(T type) {
+		return new ItemStack(this, 1, type.getMeta());
 	}
 }

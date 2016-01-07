@@ -16,48 +16,45 @@ import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
-import net.minecraft.inventory.IInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 
 import net.minecraftforge.common.util.ForgeDirection;
 
 import cpw.mods.fml.common.Optional;
 
-import forestry.api.apiculture.BeeManager;
-import forestry.api.apiculture.DefaultBeeListener;
-import forestry.api.apiculture.DefaultBeeModifier;
-import forestry.api.apiculture.IBee;
-import forestry.api.apiculture.IBeeGenome;
 import forestry.api.apiculture.IBeeHousingInventory;
 import forestry.api.apiculture.IBeeListener;
 import forestry.api.apiculture.IBeeModifier;
-import forestry.api.apiculture.IBeekeepingMode;
 import forestry.api.apiculture.IHiveFrame;
+import forestry.apiculture.ApiaryBeeListener;
+import forestry.apiculture.ApiaryBeeModifier;
+import forestry.apiculture.IApiary;
+import forestry.apiculture.gui.ContainerBeeHousing;
+import forestry.apiculture.gui.GuiBeeHousing;
+import forestry.apiculture.inventory.IApiaryInventory;
 import forestry.apiculture.inventory.InventoryApiary;
 import forestry.apiculture.trigger.ApicultureTriggers;
-import forestry.core.network.GuiId;
 
 import buildcraft.api.statements.ITriggerExternal;
 
-public class TileApiary extends TileAbstractBeeHousing {
-	private static final IBeeModifier beeModifier = new ApiaryBeeModifier();
-
-	private final IBeeListener beeListener;
-	private final InventoryApiary inventory;
+public class TileApiary extends TileBeeHousingBase implements IApiary {
+	private final IBeeModifier beeModifier = new ApiaryBeeModifier();
+	private final IBeeListener beeListener = new ApiaryBeeListener(this);
+	private final InventoryApiary inventory = new InventoryApiary(getAccessHandler());
 
 	public TileApiary() {
-		super(GuiId.ApiaryGUI, "apiary");
-		this.beeListener = new ApiaryBeeListener(this);
-
-		InventoryApiary apiaryInventory = new InventoryApiary(this);
-		this.inventory = apiaryInventory;
-		setInternalInventory(apiaryInventory);
+		super("apiary");
+		setInternalInventory(inventory);
 	}
 
 	@Override
 	public IBeeHousingInventory getBeeInventory() {
+		return inventory;
+	}
+
+	@Override
+	public IApiaryInventory getApiaryInventory() {
 		return inventory;
 	}
 
@@ -79,48 +76,6 @@ public class TileApiary extends TileAbstractBeeHousing {
 		return Collections.singleton(beeListener);
 	}
 
-	private static class ApiaryBeeModifier extends DefaultBeeModifier {
-		@Override
-		public float getProductionModifier(IBeeGenome genome, float currentModifier) {
-			return 0.1f;
-		}
-	}
-
-	private static class ApiaryBeeListener extends DefaultBeeListener {
-		private final TileApiary apiary;
-
-		public ApiaryBeeListener(TileApiary apiary) {
-			this.apiary = apiary;
-		}
-
-		@Override
-		public void wearOutEquipment(int amount) {
-			IBeekeepingMode beekeepingMode = BeeManager.beeRoot.getBeekeepingMode(apiary.getWorldObj());
-			int wear = Math.round(amount * beekeepingMode.getWearModifier());
-
-			IInventory framesInventory = apiary.inventory.getFrameInventory();
-			for (int i = 0; i < framesInventory.getSizeInventory(); i++) {
-				ItemStack hiveFrameStack = framesInventory.getStackInSlot(i);
-				if (hiveFrameStack == null) {
-					continue;
-				}
-
-				Item hiveFrameItem = hiveFrameStack.getItem();
-				if (!(hiveFrameItem instanceof IHiveFrame)) {
-					continue;
-				}
-
-				IHiveFrame hiveFrame = (IHiveFrame) hiveFrameItem;
-
-				ItemStack queenStack = apiary.getBeeInventory().getQueen();
-				IBee queen = BeeManager.beeRoot.getMember(queenStack);
-				ItemStack usedFrame = hiveFrame.frameUsed(apiary, hiveFrameStack, queen, wear);
-
-				framesInventory.setInventorySlotContents(i, usedFrame);
-			}
-		}
-	}
-
 	/* ITRIGGERPROVIDER */
 	@Optional.Method(modid = "BuildCraftAPI|statements")
 	@Override
@@ -130,5 +85,16 @@ public class TileApiary extends TileAbstractBeeHousing {
 		res.add(ApicultureTriggers.missingDrone);
 		res.add(ApicultureTriggers.noFrames);
 		return res;
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		ContainerBeeHousing container = new ContainerBeeHousing(player.inventory, this, true);
+		return new GuiBeeHousing<>(this, container, GuiBeeHousing.Icon.APIARY);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerBeeHousing(player.inventory, this, true);
 	}
 }

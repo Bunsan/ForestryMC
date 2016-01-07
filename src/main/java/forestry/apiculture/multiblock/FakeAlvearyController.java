@@ -10,36 +10,25 @@
  ******************************************************************************/
 package forestry.apiculture.multiblock;
 
-import java.io.IOException;
 import java.util.Collections;
 
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
-import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
 
 import com.mojang.authlib.GameProfile;
 
-import forestry.api.apiculture.IAlvearyComponent;
 import forestry.api.apiculture.IBeeHousingInventory;
 import forestry.api.apiculture.IBeeListener;
 import forestry.api.apiculture.IBeeModifier;
 import forestry.api.apiculture.IBeekeepingLogic;
-import forestry.api.core.EnumHumidity;
-import forestry.api.core.EnumTemperature;
-import forestry.api.core.IErrorLogic;
 import forestry.apiculture.FakeBeekeepingLogic;
-import forestry.core.access.EnumAccess;
-import forestry.core.access.FakeAccessHandler;
-import forestry.core.access.IAccessHandler;
-import forestry.core.errors.FakeErrorLogic;
 import forestry.core.inventory.FakeInventoryAdapter;
 import forestry.core.inventory.IInventoryAdapter;
-import forestry.core.network.DataInputStreamForestry;
-import forestry.core.network.DataOutputStreamForestry;
+import forestry.core.multiblock.FakeMultiblockController;
 
-public class FakeAlvearyController implements IAlvearyController {
+public class FakeAlvearyController extends FakeMultiblockController implements IAlvearyControllerInternal {
 	public static final FakeAlvearyController instance = new FakeAlvearyController();
 
 	private FakeAlvearyController() {
@@ -57,11 +46,6 @@ public class FakeAlvearyController implements IAlvearyController {
 	}
 
 	@Override
-	public Iterable<IAlvearyComponent> getComponents() {
-		return Collections.emptyList();
-	}
-
-	@Override
 	public IBeeHousingInventory getBeeInventory() {
 		return FakeBeeHousingInventory.instance;
 	}
@@ -69,16 +53,6 @@ public class FakeAlvearyController implements IAlvearyController {
 	@Override
 	public IBeekeepingLogic getBeekeepingLogic() {
 		return FakeBeekeepingLogic.instance;
-	}
-
-	@Override
-	public EnumTemperature getTemperature() {
-		return EnumTemperature.NORMAL;
-	}
-
-	@Override
-	public EnumHumidity getHumidity() {
-		return EnumHumidity.NORMAL;
 	}
 
 	@Override
@@ -92,27 +66,7 @@ public class FakeAlvearyController implements IAlvearyController {
 	}
 
 	@Override
-	public float getExactTemperature() {
-		return 0.5f;
-	}
-
-	@Override
-	public float getExactHumidity() {
-		return 0.5f;
-	}
-
-	@Override
 	public GameProfile getOwner() {
-		return null;
-	}
-
-	@Override
-	public IErrorLogic getErrorLogic() {
-		return FakeErrorLogic.instance;
-	}
-
-	@Override
-	public World getWorld() {
 		return null;
 	}
 
@@ -127,28 +81,8 @@ public class FakeAlvearyController implements IAlvearyController {
 	}
 
 	@Override
-	public void onSwitchAccess(EnumAccess oldAccess, EnumAccess newAccess) {
-
-	}
-
-	@Override
-	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
-
-	}
-
-	@Override
-	public void readGuiData(DataInputStreamForestry data) throws IOException {
-
-	}
-
-	@Override
 	public BiomeGenBase getBiome() {
 		return null;
-	}
-
-	@Override
-	public IAccessHandler getAccessHandler() {
-		return FakeAccessHandler.getInstance();
 	}
 
 	@Override

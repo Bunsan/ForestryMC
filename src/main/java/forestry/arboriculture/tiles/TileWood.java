@@ -23,11 +23,14 @@ import net.minecraft.world.World;
 
 import forestry.api.arboriculture.EnumWoodType;
 import forestry.arboriculture.IWoodTyped;
+import forestry.arboriculture.blocks.BlockSlab;
+import forestry.arboriculture.items.ItemBlockWood;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
 import forestry.core.network.IStreamable;
-import forestry.core.network.PacketTileStream;
+import forestry.core.network.packets.PacketTileStream;
 import forestry.core.tiles.TileUtil;
+import forestry.plugins.PluginArboriculture;
 
 public class TileWood extends TileEntity implements IStreamable {
 	private EnumWoodType woodType;
@@ -85,15 +88,25 @@ public class TileWood extends TileEntity implements IStreamable {
 		}
 	}
 
-	public static NBTTagCompound getTagCompound(IBlockAccess world, int x, int y, int z) {
+	public static ItemStack getPickBlock(Block block, IBlockAccess world, int x, int y, int z) {
 		TileWood wood = getWoodTile(world, x, y, z);
-		NBTTagCompound nbttagcompound = new NBTTagCompound();
 		if (wood == null) {
-			return nbttagcompound;
+			return null;
 		}
 		EnumWoodType woodType = wood.getWoodType();
-		woodType.saveToCompound(nbttagcompound);
-		return nbttagcompound;
+
+		int amount = 1;
+		if (block instanceof BlockSlab) {
+			BlockSlab blockSlab = (BlockSlab) block;
+			if (blockSlab.isDoubleSlab()) {
+				amount = 2;
+				block = PluginArboriculture.blocks.slabs;
+			}
+		}
+
+		ItemStack itemStack = new ItemStack(block, amount);
+		ItemBlockWood.saveToItemStack(woodType, itemStack);
+		return itemStack;
 	}
 
 	public static TileWood getWoodTile(IBlockAccess world, int x, int y, int z) {
@@ -103,12 +116,8 @@ public class TileWood extends TileEntity implements IStreamable {
 	public static <T extends Block & IWoodTyped> ArrayList<ItemStack> getDrops(T block, World world, int x, int y, int z) {
 		ArrayList<ItemStack> drops = new ArrayList<>();
 
-		TileWood wood = getWoodTile(world, x, y, z);
-		if (wood != null) {
-			ItemStack stack = new ItemStack(block);
-			NBTTagCompound compound = new NBTTagCompound();
-			wood.getWoodType().saveToCompound(compound);
-			stack.setTagCompound(compound);
+		ItemStack stack = getPickBlock(block, world, x, y, z);
+		if (stack != null) {
 			drops.add(stack);
 		}
 

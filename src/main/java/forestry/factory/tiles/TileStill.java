@@ -12,6 +12,7 @@ package forestry.factory.tiles;
 
 import java.io.IOException;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.inventory.ISidedInventory;
 import net.minecraft.nbt.NBTTagCompound;
 
@@ -31,10 +32,11 @@ import forestry.core.fluids.tanks.FilteredTank;
 import forestry.core.fluids.tanks.StandardTank;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.render.TankRenderInfo;
 import forestry.core.tiles.ILiquidTankTile;
 import forestry.core.tiles.TilePowered;
+import forestry.factory.gui.ContainerStill;
+import forestry.factory.gui.GuiStill;
 import forestry.factory.inventory.InventoryStill;
 import forestry.factory.recipes.StillRecipeManager;
 
@@ -49,7 +51,7 @@ public class TileStill extends TilePowered implements ISidedInventory, ILiquidTa
 	private FluidStack bufferedLiquid;
 
 	public TileStill() {
-		super(GuiId.StillGUI, "still", 1100, 8000);
+		super("still", 1100, 8000);
 		setInternalInventory(new InventoryStill(this));
 		resourceTank = new FilteredTank(Constants.PROCESSOR_TANK_CAPACITY, StillRecipeManager.recipeFluidInputs);
 		resourceTank.tankMode = StandardTank.TankMode.INPUT;
@@ -140,7 +142,7 @@ public class TileStill extends TilePowered implements ISidedInventory, ILiquidTa
 
 		boolean hasRecipe = (currentRecipe != null);
 		boolean hasTankSpace = true;
-		boolean hasFluidResource = true;
+		boolean hasLiquidResource = true;
 
 		if (hasRecipe) {
 			hasTankSpace = productTank.canFill(currentRecipe.getOutput());
@@ -148,8 +150,8 @@ public class TileStill extends TilePowered implements ISidedInventory, ILiquidTa
 				int cycles = currentRecipe.getCyclesPerUnit();
 				FluidStack input = currentRecipe.getInput();
 				int drainAmount = cycles * input.amount;
-				hasFluidResource = resourceTank.canDrain(drainAmount);
-				if (hasFluidResource) {
+				hasLiquidResource = resourceTank.canDrain(drainAmount);
+				if (hasLiquidResource) {
 					bufferedLiquid = new FluidStack(input, drainAmount);
 					resourceTank.drain(drainAmount, true);
 				}
@@ -157,11 +159,11 @@ public class TileStill extends TilePowered implements ISidedInventory, ILiquidTa
 		}
 
 		IErrorLogic errorLogic = getErrorLogic();
-		errorLogic.setCondition(!hasRecipe, EnumErrorCode.NORECIPE);
-		errorLogic.setCondition(!hasTankSpace, EnumErrorCode.NOSPACETANK);
-		errorLogic.setCondition(!hasFluidResource, EnumErrorCode.NORESOURCE);
+		errorLogic.setCondition(!hasRecipe, EnumErrorCode.NO_RECIPE);
+		errorLogic.setCondition(!hasTankSpace, EnumErrorCode.NO_SPACE_TANK);
+		errorLogic.setCondition(!hasLiquidResource, EnumErrorCode.NO_RESOURCE_LIQUID);
 
-		return hasRecipe && hasFluidResource && hasTankSpace;
+		return hasRecipe && hasLiquidResource && hasTankSpace;
 	}
 
 	@Override
@@ -208,5 +210,15 @@ public class TileStill extends TilePowered implements ISidedInventory, ILiquidTa
 	@Override
 	public FluidTankInfo[] getTankInfo(ForgeDirection from) {
 		return tankManager.getTankInfo(from);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiStill(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerStill(player.inventory, this);
 	}
 }

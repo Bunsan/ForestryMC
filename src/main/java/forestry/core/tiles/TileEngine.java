@@ -21,13 +21,12 @@ import net.minecraft.tileentity.TileEntity;
 import net.minecraftforge.common.util.ForgeDirection;
 
 import forestry.api.core.IErrorLogic;
-import forestry.apiculture.network.PacketActiveUpdate;
+import forestry.apiculture.network.packets.PacketActiveUpdate;
 import forestry.core.config.Config;
 import forestry.core.config.Constants;
 import forestry.core.errors.EnumErrorCode;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.proxy.Proxies;
 import forestry.core.utils.BlockUtil;
 import forestry.energy.EnergyManager;
@@ -35,8 +34,10 @@ import forestry.energy.EnergyManager;
 import cofh.api.energy.IEnergyConnection;
 
 public abstract class TileEngine extends TileBase implements IEnergyConnection, IActivatable {
+	private static final int CANT_SEND_ENERGY_TIME = 20;
 
 	private boolean active = false; // Used for smp.
+	private int cantSendEnergyCountdown = CANT_SEND_ENERGY_TIME;
 	/**
 	 * Indicates whether the piston is receding from or approaching the
 	 * combustion chamber
@@ -54,8 +55,8 @@ public abstract class TileEngine extends TileBase implements IEnergyConnection, 
 	public float progress;
 	protected final EnergyManager energyManager;
 
-	protected TileEngine(GuiId guiId, String hintKey, int maxHeat, int maxEnergy) {
-		super(guiId, hintKey);
+	protected TileEngine(String hintKey, int maxHeat, int maxEnergy) {
+		super(hintKey);
 		this.maxHeat = maxHeat;
 		energyManager = new EnergyManager(2000, maxEnergy);
 
@@ -118,10 +119,10 @@ public abstract class TileEngine extends TileBase implements IEnergyConnection, 
 		}
 
 		IErrorLogic errorLogic = getErrorLogic();
-		errorLogic.setCondition(forceCooldown, EnumErrorCode.FORCEDCOOLDOWN);
+		errorLogic.setCondition(forceCooldown, EnumErrorCode.FORCED_COOLDOWN);
 
 		boolean enabledRedstone = isRedstoneActivated();
-		errorLogic.setCondition(!enabledRedstone, EnumErrorCode.NOREDSTONE);
+		errorLogic.setCondition(!enabledRedstone, EnumErrorCode.NO_REDSTONE);
 
 		// Determine targeted tile
 		TileEntity tile = worldObj.getTileEntity(xCoord + getOrientation().offsetX, yCoord + getOrientation().offsetY, zCoord + getOrientation().offsetZ);
@@ -148,8 +149,14 @@ public abstract class TileEngine extends TileBase implements IEnergyConnection, 
 			if (energyManager.canSendEnergy(getOrientation(), tile)) {
 				stagePiston = 1; // If we can transfer energy, start running
 				setActive(true);
+				cantSendEnergyCountdown = CANT_SEND_ENERGY_TIME;
 			} else {
-				setActive(false);
+				if (isActive()) {
+					cantSendEnergyCountdown--;
+					if (cantSendEnergyCountdown <= 0) {
+						setActive(false);
+					}
+				}
 			}
 		} else {
 			setActive(false);

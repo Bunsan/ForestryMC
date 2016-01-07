@@ -33,7 +33,7 @@ import forestry.core.utils.ItemStackUtil;
 import forestry.core.utils.Log;
 import forestry.core.utils.vect.Vect;
 import forestry.core.utils.vect.VectUtil;
-import forestry.plugins.PluginIC2;
+import forestry.plugins.compat.PluginIC2;
 
 public class FarmLogicRubber extends FarmLogic {
 
@@ -79,6 +79,11 @@ public class FarmLogicRubber extends FarmLogic {
 
 	@Override
 	public boolean isAcceptedGermling(ItemStack itemstack) {
+		return false;
+	}
+
+	@Override
+	public boolean isAcceptedWindfall(ItemStack stack) {
 		return false;
 	}
 

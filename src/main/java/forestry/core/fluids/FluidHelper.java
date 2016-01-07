@@ -27,9 +27,9 @@ import net.minecraftforge.fluids.IFluidContainerItem;
 import net.minecraftforge.fluids.IFluidHandler;
 
 import forestry.core.config.Constants;
-import forestry.core.config.ForestryItem;
 import forestry.core.utils.InventoryUtil;
 import forestry.core.utils.ItemStackUtil;
+import forestry.plugins.PluginFluids;
 
 /**
  * @author CovertJaguar <http://www.railcraft.info>
@@ -49,11 +49,19 @@ public final class FluidHelper {
 			FluidStack liquid = getFluidStackInContainer(current);
 
 			if (fill && liquid != null) {
-				int used = tank.fill(side, liquid, true);
+				int canUseAmount = tank.fill(side, liquid, false);
+				if (canUseAmount == 0) {
+					return false;
+				}
 
-				if (used > 0) {
+				ItemStack drainedContainer = getDrainedContainer(current, canUseAmount);
+				if (ItemStackUtil.isIdenticalItem(current, drainedContainer)) {
+					return false;
+				}
+
+				int usedAmount = tank.fill(side, liquid, true);
+				if (usedAmount > 0) {
 					if (!player.capabilities.isCreativeMode) {
-						ItemStack drainedContainer = getDrainedContainer(current, used);
 						if (current.stackSize > 1) {
 							player.inventory.decrStackSize(player.inventory.currentItem, 1);
 							if (drainedContainer != null && !player.inventory.addItemStackToInventory(drainedContainer)) {
@@ -209,7 +217,7 @@ public final class FluidHelper {
 		// consume forestry containers if there is only one slot
 		if (outputSlot == inputSlot && drainedItem != null) {
 			Item item = drainedItem.getItem();
-			if (ForestryItem.canEmpty.isItemEqual(item) || ForestryItem.waxCapsule.isItemEqual(item) || ForestryItem.refractoryEmpty.isItemEqual(item)) {
+			if (PluginFluids.items.canEmpty == item || PluginFluids.items.waxCapsuleEmpty == item || PluginFluids.items.refractoryEmpty == item) {
 				drainedItem = null;
 			}
 		}

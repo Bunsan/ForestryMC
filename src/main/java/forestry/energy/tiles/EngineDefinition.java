@@ -10,19 +10,17 @@
  ******************************************************************************/
 package forestry.energy.tiles;
 
-import net.minecraft.item.crafting.IRecipe;
 import net.minecraft.world.IBlockAccess;
 
-import forestry.core.render.IBlockRenderer;
+import forestry.core.blocks.IMachinePropertiesTESR;
 import forestry.core.tiles.MachineDefinition;
 import forestry.core.tiles.TileEngine;
-import forestry.core.tiles.TileForestry;
 import forestry.core.tiles.TileUtil;
 
 public class EngineDefinition extends MachineDefinition {
 
-	public EngineDefinition(int meta, String teIdent, Class<? extends TileForestry> teClass, IBlockRenderer renderer, IRecipe... recipes) {
-		super(meta, teIdent, teClass, renderer, recipes);
+	public EngineDefinition(IMachinePropertiesTESR properties) {
+		super(properties);
 	}
 
 	@Override

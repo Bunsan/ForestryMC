@@ -17,7 +17,6 @@ import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
-import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.util.EnumChatFormatting;
 import net.minecraft.util.IIcon;
 
@@ -33,7 +32,6 @@ import forestry.api.core.Tabs;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IAllele;
 import forestry.api.genetics.IAlleleSpecies;
-import forestry.api.genetics.IIndividual;
 import forestry.apiculture.genetics.BeeGenome;
 import forestry.core.config.Config;
 import forestry.core.genetics.ItemGE;
@@ -44,9 +42,8 @@ public class ItemBeeGE extends ItemGE {
 	private final EnumBeeType type;
 
 	public ItemBeeGE(EnumBeeType type) {
-		super();
+		super(Tabs.tabApiculture);
 		this.type = type;
-		setCreativeTab(Tabs.tabApiculture);
 		if (type != EnumBeeType.DRONE) {
 			setMaxStackSize(1);
 		}
@@ -112,27 +109,21 @@ public class ItemBeeGE extends ItemGE {
 	@SuppressWarnings("rawtypes")
 	@Override
 	public void getSubItems(Item item, CreativeTabs par2CreativeTabs, List itemList) {
-		if (type == EnumBeeType.QUEEN) {
-			return;
-		}
-
 		addCreativeItems(itemList, true);
 	}
 
 	@SuppressWarnings({"rawtypes", "unchecked"})
 	public void addCreativeItems(List itemList, boolean hideSecrets) {
-
-		for (IIndividual individual : BeeManager.beeRoot.getIndividualTemplates()) {
+		for (IBee bee : BeeManager.beeRoot.getIndividualTemplates()) {
 			// Don't show secret bees unless ordered to.
-			if (hideSecrets && individual.isSecret() && !Config.isDebug) {
+			if (hideSecrets && bee.isSecret() && !Config.isDebug) {
 				continue;
 			}
 
-			NBTTagCompound nbttagcompound = new NBTTagCompound();
-			ItemStack someStack = new ItemStack(this);
-			individual.writeToNBT(nbttagcompound);
-			someStack.setTagCompound(nbttagcompound);
-			itemList.add(someStack);
+			ItemStack beeStack = BeeManager.beeRoot.getMemberStack(bee, type.ordinal());
+			if (beeStack != null) {
+				itemList.add(beeStack);
+			}
 		}
 	}
 

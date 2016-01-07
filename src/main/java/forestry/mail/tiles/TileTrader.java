@@ -25,23 +25,26 @@ import net.minecraftforge.common.util.ForgeDirection;
 
 import cpw.mods.fml.common.Optional;
 
-import forestry.api.core.ForestryAPI;
 import forestry.api.core.IErrorLogic;
 import forestry.api.mail.IMailAddress;
 import forestry.api.mail.IStamps;
 import forestry.api.mail.PostManager;
 import forestry.core.errors.EnumErrorCode;
+import forestry.core.gui.GuiHandler;
 import forestry.core.inventory.IInventoryAdapter;
 import forestry.core.network.DataInputStreamForestry;
 import forestry.core.network.DataOutputStreamForestry;
-import forestry.core.network.GuiId;
 import forestry.core.proxy.Proxies;
 import forestry.core.tiles.TileBase;
 import forestry.core.utils.ItemStackUtil;
 import forestry.mail.MailAddress;
 import forestry.mail.TradeStation;
+import forestry.mail.gui.ContainerTradeName;
+import forestry.mail.gui.ContainerTrader;
+import forestry.mail.gui.GuiTradeName;
+import forestry.mail.gui.GuiTrader;
 import forestry.mail.inventory.InventoryTradeStation;
-import forestry.mail.network.PacketTraderAddressResponse;
+import forestry.mail.network.packets.PacketTraderAddressResponse;
 import forestry.mail.triggers.MailTriggers;
 
 import buildcraft.api.statements.ITriggerExternal;
@@ -51,18 +54,15 @@ public class TileTrader extends TileBase {
 	private IMailAddress address;
 
 	public TileTrader() {
-		super(GuiId.TraderGUI, "trade.station");
+		super("trade.station");
 		address = new MailAddress();
 		setInternalInventory(new InventoryTradeStation());
 	}
 
 	@Override
 	public void openGui(EntityPlayer player) {
-		if (isLinked()) {
-			super.openGui(player);
-		} else {
-			player.openGui(ForestryAPI.instance, GuiId.TraderNameGUI.ordinal(), worldObj, xCoord, yCoord, zCoord);
-		}
+		short data = (short) (isLinked() ? 0 : 1);
+		GuiHandler.openGui(player, this, data);
 	}
 
 	@Override
@@ -132,24 +132,24 @@ public class TileTrader extends TileBase {
 
 		IErrorLogic errorLogic = getErrorLogic();
 
-		errorLogic.setCondition(!hasPostageMin(3), EnumErrorCode.NOSTAMPS);
-		errorLogic.setCondition(!hasPaperMin(2), EnumErrorCode.NOPAPER);
+		errorLogic.setCondition(!hasPostageMin(3), EnumErrorCode.NO_STAMPS);
+		errorLogic.setCondition(!hasPaperMin(2), EnumErrorCode.NO_PAPER);
 
 		IInventory inventory = getInternalInventory();
 		ItemStack tradeGood = inventory.getStackInSlot(TradeStation.SLOT_TRADEGOOD);
-		errorLogic.setCondition(tradeGood == null, EnumErrorCode.NOTRADE);
+		errorLogic.setCondition(tradeGood == null, EnumErrorCode.NO_TRADE);
 
 		boolean hasRequest = hasItemCount(TradeStation.SLOT_EXCHANGE_1, TradeStation.SLOT_EXCHANGE_COUNT, null, 1);
-		errorLogic.setCondition(!hasRequest, EnumErrorCode.NOTRADE);
+		errorLogic.setCondition(!hasRequest, EnumErrorCode.NO_TRADE);
 
 		if (tradeGood != null) {
 			boolean hasSupplies = hasItemCount(TradeStation.SLOT_SEND_BUFFER, TradeStation.SLOT_SEND_BUFFER_COUNT, tradeGood, tradeGood.stackSize);
-			errorLogic.setCondition(!hasSupplies, EnumErrorCode.NOSUPPLIES);
+			errorLogic.setCondition(!hasSupplies, EnumErrorCode.NO_SUPPLIES);
 		}
 
 		if (inventory instanceof TradeStation && updateOnInterval(200)) {
 			boolean canReceivePayment = ((TradeStation) inventory).canReceivePayment();
-			errorLogic.setCondition(!canReceivePayment, EnumErrorCode.NOSPACE);
+			errorLogic.setCondition(!canReceivePayment, EnumErrorCode.NO_SPACE_INVENTORY);
 		}
 	}
 
@@ -161,7 +161,7 @@ public class TileTrader extends TileBase {
 
 		IErrorLogic errorLogic = getErrorLogic();
 
-		return !errorLogic.contains(EnumErrorCode.NOTALPHANUMERIC) && !errorLogic.contains(EnumErrorCode.NOTUNIQUE);
+		return !errorLogic.contains(EnumErrorCode.NOT_ALPHANUMERIC) && !errorLogic.contains(EnumErrorCode.NOT_UNIQUE);
 	}
 
 	/**
@@ -289,10 +289,10 @@ public class TileTrader extends TileBase {
 			IErrorLogic errorLogic = getErrorLogic();
 
 			boolean hasValidTradeAddress = PostManager.postRegistry.isValidTradeAddress(worldObj, address);
-			errorLogic.setCondition(!hasValidTradeAddress, EnumErrorCode.NOTALPHANUMERIC);
+			errorLogic.setCondition(!hasValidTradeAddress, EnumErrorCode.NOT_ALPHANUMERIC);
 
 			boolean hasUniqueTradeAddress = PostManager.postRegistry.isAvailableTradeAddress(worldObj, address);
-			errorLogic.setCondition(!hasUniqueTradeAddress, EnumErrorCode.NOTUNIQUE);
+			errorLogic.setCondition(!hasUniqueTradeAddress, EnumErrorCode.NOT_UNIQUE);
 
 			if (hasValidTradeAddress & hasUniqueTradeAddress) {
 				this.address = address;
@@ -327,5 +327,23 @@ public class TileTrader extends TileBase {
 		res.add(MailTriggers.highBuffer90);
 		res.add(MailTriggers.highBuffer75);
 		return res;
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		if (data == 0) {
+			return new GuiTrader(player.inventory, this);
+		} else {
+			return new GuiTradeName(this);
+		}
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		if (data == 0) {
+			return new ContainerTrader(player.inventory, this);
+		} else {
+			return new ContainerTradeName(this);
+		}
 	}
 }

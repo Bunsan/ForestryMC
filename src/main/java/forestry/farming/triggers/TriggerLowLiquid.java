@@ -17,7 +17,7 @@ import net.minecraftforge.fluids.IFluidTank;
 
 import forestry.core.fluids.ITankManager;
 import forestry.core.triggers.Trigger;
-import forestry.farming.tiles.TileHatch;
+import forestry.farming.tiles.TileFarmHatch;
 
 import buildcraft.api.statements.IStatementContainer;
 import buildcraft.api.statements.IStatementParameter;
@@ -42,12 +42,12 @@ public class TriggerLowLiquid extends Trigger {
 	 */
 	@Override
 	public boolean isTriggerActive(TileEntity tile, ForgeDirection side, IStatementContainer source, IStatementParameter[] parameters) {
-		if (!(tile instanceof TileHatch)) {
+		if (!(tile instanceof TileFarmHatch)) {
 			return false;
 		}
 
-		TileHatch tileHatch = (TileHatch) tile;
-		ITankManager tankManager = tileHatch.getFarmController().getTankManager();
+		TileFarmHatch tileHatch = (TileFarmHatch) tile;
+		ITankManager tankManager = tileHatch.getMultiblockLogic().getController().getTankManager();
 
 		IFluidTank tank = tankManager.getTank(0);
 		if (tank.getCapacity() == 0) {

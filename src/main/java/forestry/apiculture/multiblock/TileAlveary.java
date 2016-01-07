@@ -10,7 +10,11 @@
  ******************************************************************************/
 package forestry.apiculture.multiblock;
 
-import net.minecraft.util.StatCollector;
+import java.io.IOException;
+import java.util.List;
+
+import net.minecraft.entity.player.EntityPlayer;
+import net.minecraft.util.ChunkCoordinates;
 import net.minecraft.util.Vec3;
 import net.minecraft.world.biome.BiomeGenBase;
 
@@ -22,24 +26,35 @@ import forestry.api.apiculture.IBeekeepingLogic;
 import forestry.api.core.EnumHumidity;
 import forestry.api.core.EnumTemperature;
 import forestry.api.core.IErrorLogic;
+import forestry.api.multiblock.IAlvearyComponent;
+import forestry.api.multiblock.IMultiblockController;
 import forestry.apiculture.blocks.BlockAlveary;
+import forestry.apiculture.gui.ContainerAlveary;
+import forestry.apiculture.gui.GuiAlveary;
 import forestry.core.access.EnumAccess;
 import forestry.core.access.IAccessHandler;
 import forestry.core.access.IRestrictedAccess;
-import forestry.core.multiblock.MultiblockControllerBase;
-import forestry.core.multiblock.MultiblockValidationException;
-import forestry.core.multiblock.rectangular.RectangularMultiblockTileEntityBase;
+import forestry.core.config.Config;
+import forestry.core.gui.IHintSource;
+import forestry.core.inventory.IInventoryAdapter;
+import forestry.core.multiblock.MultiblockTileEntityForestry;
+import forestry.core.network.DataInputStreamForestry;
+import forestry.core.network.DataOutputStreamForestry;
+import forestry.core.network.IStreamableGui;
+import forestry.core.tiles.IClimatised;
+import forestry.core.tiles.ITitled;
 
-public abstract class TileAlveary extends RectangularMultiblockTileEntityBase implements IBeeHousing, IRestrictedAccess {
+public abstract class TileAlveary extends MultiblockTileEntityForestry<MultiblockLogicAlveary> implements IBeeHousing, IAlvearyComponent, IRestrictedAccess, IStreamableGui, ITitled, IClimatised, IHintSource {
+	private final String unlocalizedTitle;
 
-	public static final int PLAIN_META = 0;
-	public static final int ENTRANCE_META = 1;
-	public static final int SWARMER_META = 2;
-	public static final int FAN_META = 3;
-	public static final int HEATER_META = 4;
-	public static final int HYGRO_META = 5;
-	public static final int STABILIZER_META = 6;
-	public static final int SIEVE_META = 7;
+	protected TileAlveary() {
+		this(BlockAlveary.Type.PLAIN);
+	}
+
+	protected TileAlveary(BlockAlveary.Type type) {
+		super(new MultiblockLogicAlveary());
+		this.unlocalizedTitle = "tile.for.alveary." + type.ordinal() + ".name";
+	}
 
 	/* TEXTURES */
 	public int getIcon(int side) {
@@ -47,136 +62,138 @@ public abstract class TileAlveary extends RectangularMultiblockTileEntityBase im
 	}
 
 	@Override
-	public void isGoodForExteriorLevel(int level) throws MultiblockValidationException {
-		if (level == 2 && !(this instanceof TileAlvearyPlain)) {
-			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.alveary.error.needPlainOnTop"));
-		}
-	}
-
-	@Override
-	public void isGoodForInterior() throws MultiblockValidationException {
-		if (!(this instanceof TileAlvearyPlain)) {
-			throw new MultiblockValidationException(StatCollector.translateToLocal("for.multiblock.alveary.error.needPlainInterior"));
-		}
-	}
-
-	@Override
-	public void onMachineActivated() {
-
-	}
-
-	@Override
-	public void onMachineDeactivated() {
-
-	}
-
-	@Override
-	public MultiblockControllerBase createNewMultiblock() {
-		return new AlvearyController(worldObj);
-	}
-
-	@Override
-	public Class<? extends MultiblockControllerBase> getMultiblockControllerType() {
-		return AlvearyController.class;
-	}
-
-	public IAlvearyController getAlvearyController() {
-		if (isConnected()) {
-			return (IAlvearyController) getMultiblockController();
-		} else {
-			return FakeAlvearyController.instance;
-		}
-	}
-
-	@Override
-	public void onMachineAssembled(MultiblockControllerBase controller) {
-		super.onMachineAssembled(controller);
-
+	public void onMachineAssembled(IMultiblockController multiblockController, ChunkCoordinates minCoord, ChunkCoordinates maxCoord) {
 		// Re-render this block on the client
 		if (worldObj.isRemote) {
 			this.worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
 		}
-		notifyNeighborsOfBlockChange();
+		worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, getBlockType());
 		markDirty();
 	}
 
 	@Override
 	public void onMachineBroken() {
-		super.onMachineBroken();
-
 		// Re-render this block on the client
 		if (worldObj.isRemote) {
 			this.worldObj.markBlockForUpdate(xCoord, yCoord, zCoord);
 		}
-		notifyNeighborsOfBlockChange();
+		worldObj.notifyBlocksOfNeighborChange(xCoord, yCoord, zCoord, getBlockType());
 		markDirty();
 	}
 
 	/* IHousing */
 	@Override
 	public BiomeGenBase getBiome() {
-		return getAlvearyController().getBiome();
+		return getMultiblockLogic().getController().getBiome();
 	}
 
 	/* IBeeHousing */
 	@Override
 	public Iterable<IBeeModifier> getBeeModifiers() {
-		return getAlvearyController().getBeeModifiers();
+		return getMultiblockLogic().getController().getBeeModifiers();
 	}
 
 	@Override
 	public Iterable<IBeeListener> getBeeListeners() {
-		return getAlvearyController().getBeeListeners();
+		return getMultiblockLogic().getController().getBeeListeners();
 	}
 
 	@Override
 	public IBeeHousingInventory getBeeInventory() {
-		return getAlvearyController().getBeeInventory();
+		return getMultiblockLogic().getController().getBeeInventory();
 	}
 
 	@Override
 	public IBeekeepingLogic getBeekeepingLogic() {
-		return getAlvearyController().getBeekeepingLogic();
+		return getMultiblockLogic().getController().getBeekeepingLogic();
 	}
 
 	@Override
 	public Vec3 getBeeFXCoordinates() {
-		return getAlvearyController().getBeeFXCoordinates();
+		return getMultiblockLogic().getController().getBeeFXCoordinates();
 	}
 
 	/* IClimatised */
 	@Override
 	public EnumTemperature getTemperature() {
-		return getAlvearyController().getTemperature();
+		return getMultiblockLogic().getController().getTemperature();
 	}
 
 	@Override
 	public EnumHumidity getHumidity() {
-		return getAlvearyController().getHumidity();
+		return getMultiblockLogic().getController().getHumidity();
 	}
 
 	@Override
 	public int getBlockLightValue() {
-		return getAlvearyController().getBlockLightValue();
+		return getMultiblockLogic().getController().getBlockLightValue();
 	}
 
 	@Override
 	public boolean canBlockSeeTheSky() {
-		return getAlvearyController().canBlockSeeTheSky();
+		return getMultiblockLogic().getController().canBlockSeeTheSky();
 	}
 
 	@Override
 	public IErrorLogic getErrorLogic() {
-		return getAlvearyController().getErrorLogic();
+		return getMultiblockLogic().getController().getErrorLogic();
 	}
 
 	@Override
 	public IAccessHandler getAccessHandler() {
-		return getAlvearyController().getAccessHandler();
+		return getMultiblockLogic().getController().getAccessHandler();
 	}
 
 	@Override
 	public void onSwitchAccess(EnumAccess oldAccess, EnumAccess newAccess) {
-		getAlvearyController().onSwitchAccess(oldAccess, newAccess);
+		getMultiblockLogic().getController().onSwitchAccess(oldAccess, newAccess);
+	}
+
+	@Override
+	public IInventoryAdapter getInternalInventory() {
+		return getMultiblockLogic().getController().getInternalInventory();
+	}
+
+	@Override
+	public String getUnlocalizedTitle() {
+		return unlocalizedTitle;
+	}
+
+	/* IHintSource */
+	@Override
+	public List<String> getHints() {
+		return Config.hints.get("apiary");
+	}
+
+	/* IClimatised */
+	@Override
+	public float getExactTemperature() {
+		return getMultiblockLogic().getController().getExactTemperature();
+	}
+
+	@Override
+	public float getExactHumidity() {
+		return getMultiblockLogic().getController().getExactHumidity();
+	}
+
+	/* IStreamableGui */
+	@Override
+	public void writeGuiData(DataOutputStreamForestry data) throws IOException {
+		getMultiblockLogic().getController().writeGuiData(data);
+	}
+
+	@Override
+	public void readGuiData(DataInputStreamForestry data) throws IOException {
+		getMultiblockLogic().getController().readGuiData(data);
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiAlveary(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerAlveary(player.inventory, this);
 	}
 }

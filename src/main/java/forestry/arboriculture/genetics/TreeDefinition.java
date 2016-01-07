@@ -45,7 +45,6 @@ import forestry.arboriculture.genetics.alleles.AlleleFruit;
 import forestry.arboriculture.genetics.alleles.AlleleGrowth;
 import forestry.arboriculture.render.IconProviderGermling;
 import forestry.arboriculture.render.IconProviderGermlingVanilla;
-import forestry.arboriculture.render.IconProviderLeaves;
 import forestry.arboriculture.tiles.TileLeaves;
 import forestry.arboriculture.worldgen.BlockTypeLog;
 import forestry.arboriculture.worldgen.WorldGenAcacia;
@@ -84,11 +83,11 @@ import forestry.arboriculture.worldgen.WorldGenWenge;
 import forestry.arboriculture.worldgen.WorldGenWillow;
 import forestry.arboriculture.worldgen.WorldGenZebrawood;
 import forestry.core.config.Constants;
-import forestry.core.config.ForestryBlock;
 import forestry.core.genetics.alleles.AlleleBoolean;
 import forestry.core.genetics.alleles.AlleleHelper;
 import forestry.core.genetics.alleles.AllelePlantType;
 import forestry.core.genetics.alleles.EnumAllele;
+import forestry.plugins.PluginArboriculture;
 
 public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 	Oak(TreeBranchDefinition.QUERCUS, "appleOak", "robur", false, EnumLeafType.DECIDUOUS, new Color(4764952), new Color(4764952).brighter(), 0, new ItemStack(Blocks.log, 1, 0)) {
@@ -462,7 +461,7 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 			// only available by rare villager trade
 		}
 	},
-	Jungle(TreeBranchDefinition.TROPICAL, "jungle", "tectona", false, EnumLeafType.JUNGLE, new Color(4764952), new Color(0x539d12), 3, new ItemStack(Blocks.log, 1, 3)) {
+	Jungle(TreeBranchDefinition.TROPICAL, "jungle", "tectona", false, EnumLeafType.JUNGLE, new Color(4764952), new Color(0x658917), 3, new ItemStack(Blocks.log, 1, 3)) {
 		@Override
 		public WorldGenerator getWorldGenerator(ITreeGenData tree) {
 			return new WorldGenJungle(tree);
@@ -868,7 +867,7 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 					.restrictHumidity(EnumHumidity.DAMP);
 		}
 	},
-	Papaya(TreeBranchDefinition.CARICA, "papaya", "papaya", true, EnumLeafType.PALM, new Color(0x6d9f58), new Color(0x9ee67f), EnumWoodType.PAPAYA) {
+	Papaya(TreeBranchDefinition.CARICA, "papaya", "papaya", true, EnumLeafType.PALM, new Color(0x6d9f58), new Color(0x75E675), EnumWoodType.PAPAYA) {
 		@Override
 		public WorldGenerator getWorldGenerator(ITreeGenData tree) {
 			return new WorldGenPapaya(tree);
@@ -893,7 +892,7 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 			registerMutation(Jungle, Cherry, 5);
 		}
 	},
-	Date(TreeBranchDefinition.PHOENIX, "datePalm", "dactylifera", true, EnumLeafType.PALM, new Color(0xcbcd79), new Color(0xf0f38f), EnumWoodType.PALM) {
+	Date(TreeBranchDefinition.PHOENIX, "datePalm", "dactylifera", true, EnumLeafType.PALM, new Color(0xcbcd79), new Color(0xB3F370), EnumWoodType.PALM) {
 		@Override
 		public WorldGenerator getWorldGenerator(ITreeGenData tree) {
 			return new WorldGenDate(tree);
@@ -957,13 +956,13 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 
 	// vanilla tree constructor
 	TreeDefinition(TreeBranchDefinition branch, String speciesName, String binomial, boolean dominant, EnumLeafType leafType, Color primary, Color secondary, int vanillaMeta, ItemStack vanillaWood) {
-		String uid = "forestry.tree" + this.toString();
-		String unlocalizedDescription = "for.description.tree" + this.toString();
+		String uid = "forestry.tree" + this;
+		String unlocalizedDescription = "for.description.tree" + this;
 		String unlocalizedName = "for.trees.species." + speciesName;
 
 		this.branch = branch;
 
-		ILeafIconProvider leafIconProvider = new IconProviderLeaves(leafType, primary, secondary);
+		ILeafIconProvider leafIconProvider = TreeManager.treeFactory.getLeafIconProvider(leafType, primary, secondary);
 		IGermlingIconProvider germlingIconProvider = new IconProviderGermlingVanilla(vanillaMeta);
 
 		this.species = TreeManager.treeFactory.createSpecies(uid, unlocalizedName, "Sengir", unlocalizedDescription, dominant, branch.getBranch(), binomial, leafIconProvider, germlingIconProvider, this);
@@ -973,13 +972,13 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 
 	// forestry tree constructor
 	TreeDefinition(TreeBranchDefinition branch, String speciesName, String binomial, boolean dominant, EnumLeafType leafType, Color primary, Color secondary, EnumWoodType woodType) {
-		String uid = "forestry.tree" + this.toString();
-		String unlocalizedDescription = "for.description.tree" + this.toString();
+		String uid = "forestry.tree" + this;
+		String unlocalizedDescription = "for.description.tree" + this;
 		String unlocalizedName = "for.trees.species." + speciesName;
 
 		this.branch = branch;
 
-		ILeafIconProvider leafIconProvider = new IconProviderLeaves(leafType, primary, secondary);
+		ILeafIconProvider leafIconProvider = TreeManager.treeFactory.getLeafIconProvider(leafType, primary, secondary);
 		IGermlingIconProvider germlingIconProvider = new IconProviderGermling(uid);
 
 		this.species = TreeManager.treeFactory.createSpecies(uid, unlocalizedName, "Sengir", unlocalizedDescription, dominant, branch.getBranch(), binomial, leafIconProvider, germlingIconProvider, this);
@@ -994,7 +993,7 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 	protected abstract void registerMutations();
 
 	@Override
-	public void setLogBlock(World world, int x, int y, int z, ForgeDirection facing) {
+	public void setLogBlock(ITreeGenome genome, World world, int x, int y, int z, ForgeDirection facing) {
 		if (woodType == null) {
 			Block vanillaWoodBlock = Block.getBlockFromItem(vanillaWood.getItem());
 			int vanillaWoodMeta = vanillaWood.getItemDamage();
@@ -1022,13 +1021,19 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 	}
 
 	@Override
-	public void setLeaves(World world, GameProfile owner, int x, int y, int z, boolean decorative) {
-		boolean placed = ForestryBlock.leaves.setBlock(world, x, y, z, 0);
+	public void setLogBlock(World world, int x, int y, int z, ForgeDirection facing) {
+		setLogBlock(genome, world, x, y, z, facing);
+	}
+
+	@Override
+	public void setLeaves(ITreeGenome genome, World world, GameProfile owner, int x, int y, int z, boolean decorative) {
+		boolean placed = world.setBlock(x, y, z, PluginArboriculture.blocks.leaves, 0, Constants.FLAG_BLOCK_SYNCH_AND_UPDATE);
 		if (!placed) {
 			return;
 		}
 
-		if (!ForestryBlock.leaves.isBlockEqual(world, x, y, z)) {
+		Block block = world.getBlock(x, y, z);
+		if (PluginArboriculture.blocks.leaves != block) {
 			world.setBlockToAir(x, y, z);
 			return;
 		}
@@ -1043,9 +1048,14 @@ public enum TreeDefinition implements ITreeDefinition, ITreeGenerator {
 		if (decorative) {
 			tileLeaves.setDecorative();
 		}
-		tileLeaves.setTree(getIndividual());
+		tileLeaves.setTree(new Tree(genome));
 
 		world.markBlockForUpdate(x, y, z);
+	}
+
+	@Override
+	public void setLeaves(World world, GameProfile owner, int x, int y, int z, boolean decorative) {
+		setLeaves(genome, world, owner, x, y, z, decorative);
 	}
 
 	public static void initTrees() {

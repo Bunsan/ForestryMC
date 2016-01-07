@@ -14,12 +14,12 @@ import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
 import forestry.apiculture.multiblock.TileAlvearySieve;
-import forestry.core.config.ForestryItem;
 import forestry.core.inventory.InventoryAdapterTile;
-import forestry.core.tiles.ICrafter;
+import forestry.core.inventory.watchers.ISlotPickupWatcher;
 import forestry.core.utils.ItemStackUtil;
+import forestry.plugins.PluginCore;
 
-public class InventoryAlvearySieve extends InventoryAdapterTile<TileAlvearySieve> implements ICrafter {
+public class InventoryAlvearySieve extends InventoryAdapterTile<TileAlvearySieve> implements ISlotPickupWatcher {
 	public static final int SLOT_POLLEN_1 = 0;
 	public static final int SLOTS_POLLEN_COUNT = 4;
 	public static final int SLOT_SIEVE = 4;
@@ -30,7 +30,7 @@ public class InventoryAlvearySieve extends InventoryAdapterTile<TileAlvearySieve
 
 	@Override
 	public boolean canSlotAccept(int slotIndex, ItemStack itemStack) {
-		return ItemStackUtil.isIdenticalItem(ForestryItem.craftingMaterial.getItemStack(1, 3), itemStack);
+		return ItemStackUtil.isIdenticalItem(PluginCore.items.craftingMaterial.getWovenSilk(), itemStack);
 	}
 
 	public boolean canStorePollen() {
@@ -56,17 +56,15 @@ public class InventoryAlvearySieve extends InventoryAdapterTile<TileAlvearySieve
 		}
 	}
 
-	/* ICrafter */
+	/* ISlotPickupWatcher */
 	@Override
-	public ItemStack takenFromSlot(int slotIndex, EntityPlayer player) {
+	public void onPickupFromSlot(int slotIndex, EntityPlayer player) {
 		if (slotIndex == SLOT_SIEVE) {
 			for (int i = SLOT_POLLEN_1; i < SLOT_POLLEN_1 + SLOTS_POLLEN_COUNT; i++) {
 				setInventorySlotContents(i, null);
 			}
-			return getStackInSlot(SLOT_SIEVE);
 		} else {
 			setInventorySlotContents(SLOT_SIEVE, null);
-			return getStackInSlot(slotIndex);
 		}
 	}
 }

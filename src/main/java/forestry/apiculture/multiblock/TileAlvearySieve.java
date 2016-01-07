@@ -10,28 +10,30 @@
  ******************************************************************************/
 package forestry.apiculture.multiblock;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 
 import forestry.api.apiculture.DefaultBeeListener;
-import forestry.api.apiculture.IAlvearyComponent;
 import forestry.api.apiculture.IBeeListener;
 import forestry.api.arboriculture.EnumGermlingType;
 import forestry.api.genetics.AlleleManager;
 import forestry.api.genetics.IIndividual;
 import forestry.api.genetics.ISpeciesRoot;
+import forestry.api.multiblock.IAlvearyComponent;
 import forestry.apiculture.blocks.BlockAlveary;
+import forestry.apiculture.gui.ContainerAlvearySieve;
+import forestry.apiculture.gui.GuiAlvearySieve;
 import forestry.apiculture.inventory.InventoryAlvearySieve;
 import forestry.core.inventory.IInventoryAdapter;
-import forestry.core.network.GuiId;
-import forestry.core.tiles.ICrafter;
+import forestry.core.inventory.watchers.ISlotPickupWatcher;
 
-public class TileAlvearySieve extends TileAlvearyWithGui implements IAlvearyComponent.BeeListener {
+public class TileAlvearySieve extends TileAlveary implements IAlvearyComponent.BeeListener {
 
 	private final IBeeListener beeListener;
 	private final InventoryAlvearySieve inventory;
 
 	public TileAlvearySieve() {
-		super(TileAlveary.SIEVE_META, GuiId.AlvearySieveGUI);
+		super(BlockAlveary.Type.SIEVE);
 		this.inventory = new InventoryAlvearySieve(this);
 		this.beeListener = new AlvearySieveBeeListener(inventory);
 	}
@@ -41,7 +43,7 @@ public class TileAlvearySieve extends TileAlvearyWithGui implements IAlvearyComp
 		return inventory;
 	}
 
-	public ICrafter getCrafter() {
+	public ISlotPickupWatcher getCrafter() {
 		return inventory;
 	}
 
@@ -56,6 +58,16 @@ public class TileAlvearySieve extends TileAlvearyWithGui implements IAlvearyComp
 			return BlockAlveary.BOTTOM;
 		}
 		return BlockAlveary.SIEVE;
+	}
+
+	@Override
+	public Object getGui(EntityPlayer player, int data) {
+		return new GuiAlvearySieve(player.inventory, this);
+	}
+
+	@Override
+	public Object getContainer(EntityPlayer player, int data) {
+		return new ContainerAlvearySieve(player.inventory, this);
 	}
 
 	static class AlvearySieveBeeListener extends DefaultBeeListener {
