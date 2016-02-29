@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import net.minecraft.block.Block;
+import net.minecraft.init.Items;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemBlock;
 import net.minecraft.item.ItemStack;
@@ -179,6 +180,7 @@ public class PluginFluids extends ForestryPlugin {
 			int x = movingObjectPosition.blockX;
 			int y = movingObjectPosition.blockY;
 			int z = movingObjectPosition.blockZ;
+			if(event.current == null || event.current.getItem() != Items.bucket || event.world.getBlockMetadata(x, y, z) != 0) return;
 			Block targetedBlock = event.world.getBlock(x, y, z);
 			if (targetedBlock instanceof BlockForestryFluid) {
 				Item filledBucket = ItemLiquidContainer.getExistingBucket(targetedBlock);
