@@ -176,6 +176,11 @@ public class PluginFluids extends ForestryPlugin {
 	public static class FillBucketHook {
 		@SubscribeEvent
 		public void fillBucket(FillBucketEvent event) {
+			ItemStack bucket = event.current;
+			if (bucket == null || bucket.getItem() != Items.bucket) {
+				return;
+			}
+			
 			MovingObjectPosition movingObjectPosition = event.target;
 			int x = movingObjectPosition.blockX;
 			int y = movingObjectPosition.blockY;
