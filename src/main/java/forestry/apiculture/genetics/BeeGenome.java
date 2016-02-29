@@ -126,7 +126,7 @@ public class BeeGenome extends Genome implements IBeeGenome {
 
 	@Override
 	public EnumTolerance getToleranceTemp() {
-		return ((AlleleTolerance) getActiveAllele(EnumBeeChromosome.TEMPERATURE_TOLERANCE)).getValue();
+		return EnumTolerance.BOTH_5;
 	}
 
 	@Override
@@ -136,7 +136,7 @@ public class BeeGenome extends Genome implements IBeeGenome {
 
 	@Override
 	public EnumTolerance getToleranceHumid() {
-		return ((AlleleTolerance) getActiveAllele(EnumBeeChromosome.HUMIDITY_TOLERANCE)).getValue();
+		return EnumTolerance.BOTH_5;
 	}
 
 	@Override

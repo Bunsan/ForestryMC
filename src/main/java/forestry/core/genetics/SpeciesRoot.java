@@ -148,7 +148,6 @@ public abstract class SpeciesRoot implements ISpeciesRoot {
 		return chromosomes;
 	}
 
-	/* BREEDING TRACKER */
 	@Override
 	public void syncBreedingTrackerToPlayer(EntityPlayer player) {
 		getBreedingTracker(player.worldObj, player.getGameProfile()).synchToPlayer(player);
