@@ -180,8 +180,8 @@ public class PluginFluids extends ForestryPlugin {
 			int x = movingObjectPosition.blockX;
 			int y = movingObjectPosition.blockY;
 			int z = movingObjectPosition.blockZ;
-			if(event.current == null || event.current.getItem() != Items.bucket || event.world.getBlockMetadata(x, y, z) != 0) return;
 			Block targetedBlock = event.world.getBlock(x, y, z);
+			if(event.current == null || event.current.getItem() != Items.bucket || event.world.getBlockMetadata(x, y, z) != 0) return;
 			if (targetedBlock instanceof BlockForestryFluid) {
 				Item filledBucket = ItemLiquidContainer.getExistingBucket(targetedBlock);
 				if (filledBucket != null) {
