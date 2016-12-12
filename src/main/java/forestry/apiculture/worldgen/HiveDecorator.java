@@ -14,6 +14,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
+import com.bioxx.tfc.Core.TFC_Climate;
+import forestry.core.utils.Log;
 import net.minecraft.block.Block;
 import net.minecraft.world.World;
 import net.minecraft.world.biome.BiomeGenBase;
@@ -65,9 +67,10 @@ public abstract class HiveDecorator {
 
 		int worldX = chunkX * 16;
 		int worldZ = chunkZ * 16;
+		int worldY = 144;
 
 		BiomeGenBase biome = world.getBiomeGenForCoords(worldX, worldZ);
-		EnumHumidity humidity = EnumHumidity.getFromValue(biome.rainfall);
+		EnumHumidity humidity = EnumHumidity.getFromValue(TFC_Climate.getRainfall(world, worldX, worldY, worldZ));
 
 		if (!hive.isGoodBiome(biome) || !hive.isGoodHumidity(humidity)) {
 			return false;
@@ -88,8 +91,9 @@ public abstract class HiveDecorator {
 	private static void decorateHivesDebug(World world, int chunkX, int chunkZ, List<Hive> hives) {
 		int worldX = chunkX * 16;
 		int worldZ = chunkZ * 16;
+		int worldY = 144;
 		BiomeGenBase biome = world.getBiomeGenForCoords(worldX, worldZ);
-		EnumHumidity humidity = EnumHumidity.getFromValue(biome.rainfall);
+		EnumHumidity humidity = EnumHumidity.getFromValue(TFC_Climate.getRainfall(world, worldX, worldY, worldZ));
 
 		for (int x = 0; x < 16; x++) {
 			for (int z = 0; z < 16; z++) {
@@ -118,7 +122,7 @@ public abstract class HiveDecorator {
 		}
 
 		BiomeGenBase biome = world.getBiomeGenForCoords(x, z);
-		EnumTemperature temperature = EnumTemperature.getFromValue(biome.getFloatTemperature(x, y, z));
+		EnumTemperature temperature = EnumTemperature.getFromValue(TFC_Climate.getBioTemperatureHeight(world, x, world.getHeightValue(x, z), z));
 		if (!hive.isGoodTemperature(temperature)) {
 			return false;
 		}
@@ -126,7 +130,6 @@ public abstract class HiveDecorator {
 		if (!hive.isValidLocation(world, x, y, z)) {
 			return false;
 		}
-
 		return setHive(world, x, y, z, hive);
 	}
 

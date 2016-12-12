@@ -70,21 +70,17 @@ public class SqueezerRecipeManager implements ISqueezerManager {
 			}
 		}
 
+		// First try to match a specific recipe (without OreDictionary)
 		for (ISqueezerRecipe recipe : recipes) {
 			if (ItemStackUtil.containsSets(recipe.getResources(), items, false, false) > 0) {
 				return recipe;
 			}
 		}
 
-		return null;
-	}
-
-	public static ISqueezerRecipe findRecipeWithIngredient(ItemStack ingredient) {
+		// If that fails - try again with OreDictionary support enabled
 		for (ISqueezerRecipe recipe : recipes) {
-			for (ItemStack recipeIngredient : recipe.getResources()) {
-				if (ItemStackUtil.isCraftingEquivalent(recipeIngredient, ingredient, false, false)) {
-					return recipe;
-				}
+			if (ItemStackUtil.containsSets(recipe.getResources(), items, true, false) > 0) {
+				return recipe;
 			}
 		}
 

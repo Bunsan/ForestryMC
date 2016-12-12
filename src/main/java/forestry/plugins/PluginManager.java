@@ -100,8 +100,8 @@ public class PluginManager {
 		NATURA(new PluginNatura()),
 		PLANTMEGAPACK(new PluginPlantMegaPack()),
 		ROTARYCRAFT(new PluginRotaryCraft()),
-		TERRAFIRMACRAFT(new PluginTerraFirmaCraft()),
-		WITCHERY(new PluginWitchery());
+		WITCHERY(new PluginWitchery()),
+		TERRAFIRMACRAFT(new PluginTerraFirmaCraft());
 
 		static {
 			ForestryAPI.enabledPlugins = new HashSet<>();

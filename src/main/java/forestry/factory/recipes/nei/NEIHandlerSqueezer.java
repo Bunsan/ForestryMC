@@ -246,9 +246,11 @@ public class NEIHandlerSqueezer extends RecipeHandlerBase {
 			return;
 		}
 
-		ISqueezerRecipe recipe = SqueezerRecipeManager.findRecipeWithIngredient(ingred);
+		ISqueezerRecipe recipe = SqueezerRecipeManager.findMatchingRecipe(new ItemStack[]{ingred});
 		if (recipe != null) {
 			CachedSqueezerRecipe crecipe = new CachedSqueezerRecipe(recipe);
+			// Override recipe to show the right input in case it's OD
+			crecipe.setIngredients(new ItemStack[]{ingred});
 			this.arecipes.add(crecipe);
 		}
 	}
